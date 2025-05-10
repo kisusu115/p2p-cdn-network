@@ -1,0 +1,18 @@
+package com.p2pnetwork.message;
+
+public enum MessageType {
+    INTRODUCE,
+    RTT_CHECK_REQUEST,
+    RTT_CHECK_RESPONSE,
+    PEER_INIT_BASIC,
+    PEER_INIT_SUPER,
+    PEER_INIT_REDUNDANCY,
+    TABLE_REQUEST,
+    TABLE_RESPONSE,
+    PROMOTE_SUPERNODE,
+    DIRECT_MESSAGE,
+    LOCAL_BROADCAST,
+    GLOBAL_BROADCAST,
+    GLOBAL_ACK
+    // . . .
+}
