@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
 }
 
 group = 'org.example'
@@ -13,11 +15,18 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.17.0'
-
+    implementation 'ch.hsr:geohash:1.4.0'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
     testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
 }
 
-test {
-    useJUnitPlatform()
+application {
+    mainClass = 'com.p2pnetwork.Main'
+}
+
+shadowJar {
+    archiveFileName.set('p2p-net.jar')
+    manifest {
+        attributes 'Main-Class': 'com.p2pnetwork.Main'
+    }
 }

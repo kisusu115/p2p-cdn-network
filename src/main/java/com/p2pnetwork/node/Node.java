@@ -1,17 +1,21 @@
 package com.p2pnetwork.node;
 
 import com.p2pnetwork.message.Message;
+import com.p2pnetwork.message.MessageType;
 import com.p2pnetwork.network.ClientHandler;
 import com.p2pnetwork.network.MessageHandler;
 import com.p2pnetwork.network.MessageSender;
-import com.p2pnetwork.routing.table.LocalRoutingTable;
+import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.routing.bootstrap.BootstrapNodeManager;
 import com.p2pnetwork.routing.bootstrap.BootstrapNodeTable;
+import com.p2pnetwork.routing.table.LocalRoutingTable;
+import com.p2pnetwork.routing.table.SuperNodeTable;
+import com.p2pnetwork.util.NodeIdGenerator;
 import lombok.Getter;
 
 import java.io.IOException;
-import java.net.*;
-import java.util.UUID;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,68 +25,97 @@ public class Node {
     private final String ip;
     private final int port;
     private NodeRole role;
+    private final LocalRoutingTable routingTable;
+    private final ExecutorService executor;
+    private final MessageHandler messageHandler;
+    private final MessageSender messageSender;
 
-    private LocalRoutingTable localRoutingTable;
-    private MessageHandler messageHandler;
-    private MessageSender messageSender;
-
-    private final ExecutorService executorService;
-
-    public Node(int port) throws UnknownHostException {
-        this.nodeId = UUID.randomUUID().toString(); // 다른 ID 생성 방식으로 수정 예정
+    public Node(double lat, double lon, int port) throws Exception {
         this.ip = InetAddress.getLocalHost().getHostAddress();
         this.port = port;
+        this.nodeId = NodeIdGenerator.generateNodeId(lat, lon, ip, port);
         this.role = NodeRole.PEER;
-
-        this.localRoutingTable = new LocalRoutingTable(this);
+        this.routingTable = new LocalRoutingTable(this);
+        this.executor = Executors.newFixedThreadPool(10);
         this.messageHandler = new MessageHandler(this);
         this.messageSender = new MessageSender(this);
-
-        this.executorService = Executors.newFixedThreadPool(10);
     }
 
     public void start() {
-        System.out.println("Node started at port " + port + " with ID " + nodeId);
-        executorService.submit(this::listen);  // 스레드 풀에서 listen 메소드 실행
-
-        if (!BootstrapNodeTable.isPortBootstrapNode(port)) {
-            connectToBootstrap();
+        executor.submit(this::listen);
+        if (BootstrapNodeTable.isBootstrapPort(port)) {
+            this.role = NodeRole.BOOTSTRAP;
+            initializeSuperNodeTableForBootstrap();
+        } else {
+            boolean connected = BootstrapNodeManager.connect(this);
+            if (!connected) {
+                System.err.println("[ERROR] 부트스트랩 노드에 연결할 수 없습니다. 프로그램을 종료합니다.");
+                System.exit(1);
+            }
         }
+    }
+
+    private void initializeSuperNodeTableForBootstrap() {
+        BootstrapNodeTable.getAll().forEach(entry ->
+                SuperNodeTable.getInstance().addSuperNode(
+                        new RoutingEntry(
+                                entry.getNodeId(), entry.getIp(), entry.getPort(),
+                                NodeRole.SUPERNODE
+                        )
+                )
+        );
     }
 
     private void listen() {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            while (true) {
-                Socket client = serverSocket.accept();
-                executorService.submit(new ClientHandler(client, this));  // 클라이언트 연결을 스레드 풀에서 처리
-            }
+        try (ServerSocket server = new ServerSocket(port)) {
+            while (true) executor.submit(new ClientHandler(server.accept(), this));
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("[ERROR] 포트 " + port + " 리스닝 실패: " + e.getMessage());
+            throw new RuntimeException("포트 " + port + " 리스닝 실패", e);
         }
     }
 
-    private void connectToBootstrap() {
-        boolean connected = BootstrapNodeManager.connectToBootstrap(this);
-        if (!connected) {
-            System.err.println("모든 부트스트랩 노드에 대해 연결이 실패하였습니다.");
-            shutdown();
-            System.exit(1);
-        }
-    }
-
-    public <T> void receiveMessage(Message<T> message) {
+    public void receiveMessage(Message<?> message) {
         messageHandler.handleReceivedMessage(message);
     }
 
-    public LocalRoutingTable getRoutingTable() {
-        return localRoutingTable;
+    public boolean hasAtLeastRole(NodeRole role) {
+        return this.role.isAtLeast(role);
     }
 
-    public boolean hasAtLeastRole(NodeRole requiredRole) {
-        return this.role.isAtLeast(requiredRole);
+    public void promoteToSuperNode() {
+        this.role = NodeRole.SUPERNODE;
+        System.out.println("[INFO] " + nodeId + " ▶ SUPERNODE 승격");
+        RoutingEntry entry = new RoutingEntry(nodeId, ip, port, NodeRole.SUPERNODE);
+        SuperNodeTable.getInstance().addSuperNode(entry);
+
+        // 본인을 LocalRoutingTable의 SuperNodeEntry 지정 및 로컬 라우팅테이블에 추가
+        this.routingTable.setSuperNodeEntry(entry);
+        this.routingTable.addEntry(entry);
     }
 
-    public void shutdown() {
-        executorService.shutdown();  // 스레드 풀 종료
+    public void setSuperNode(RoutingEntry superNodeEntry) {
+        this.routingTable.setSuperNodeEntry(superNodeEntry);
+
+        // 슈퍼노드에 JOIN_REQUEST 전송
+        RoutingEntry myEntry = new RoutingEntry(
+                nodeId, ip, port, NodeRole.PEER
+        );
+        Message<RoutingEntry> joinRequest = new Message<>(
+                MessageType.JOIN_REQUEST,
+                nodeId,
+                superNodeEntry.getNodeId(),
+                myEntry,
+                System.currentTimeMillis()
+        );
+        new MessageSender(this).sendMessage(
+                superNodeEntry.getIp(),
+                superNodeEntry.getPort(),
+                joinRequest
+        );
+    }
+
+    public void promoteToRedundancy() {
+        this.role = NodeRole.REDUNDANCY;
     }
 }

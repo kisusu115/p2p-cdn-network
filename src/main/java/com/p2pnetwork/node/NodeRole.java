@@ -2,6 +2,7 @@ package com.p2pnetwork.node;
 
 public enum NodeRole {
     PEER,
+    REDUNDANCY,
     SUPERNODE,
     BOOTSTRAP;
 

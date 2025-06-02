@@ -1,81 +1,91 @@
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.p2pnetwork.message.Message;
 import com.p2pnetwork.message.MessageType;
-import com.p2pnetwork.message.dto.IntroduceContent;
-import com.p2pnetwork.network.MessageSender;
+import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.node.Node;
+import com.p2pnetwork.node.NodeRole;
+import com.p2pnetwork.network.MessageSender;
 import com.p2pnetwork.util.JsonUtils;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class MessageDeserializationTest {
-    private MessageSender messageSender;
-    private Node node;
+class MessageDeserializationTest {
     private ServerSocket serverSocket;
+    private Node node;
+    private MessageSender messageSender;
 
     @BeforeEach
-    public void setup() throws IOException {
+    void setUp() throws Exception {
         serverSocket = new ServerSocket(10001);
-        node = new Node(9001);  // Node 객체 생성
-        messageSender = new MessageSender(node);  // MessageSender 객체 생성
+        node = new Node(37.5665, 126.9780, 9001);
+        messageSender = new MessageSender(node);
     }
 
-    @DisplayName("Message<?> 메시지 수신 및 MessageDeserializer가 정상적으로 작동하는지 확인")
+    @AfterEach
+    void tearDown() throws IOException {
+        if (serverSocket != null && !serverSocket.isClosed()) {
+            serverSocket.close();
+        }
+    }
+
+    @DisplayName("RoutingEntry 메시지 역직렬화 정상 동작 확인")
     @Test
-    public void testMessageDeserialization() throws IOException, InterruptedException {
+    void testRoutingEntryDeserialization() throws Exception {
         AtomicReference<Throwable> threadException = new AtomicReference<>();
 
-        // Given: 테스트용 IntroduceContent 메시지 생성
-        IntroduceContent introduceContent = IntroduceContent.of("127.0.0.1", 9003);
-        Message<IntroduceContent> exampleMessage = Message.of(MessageType.INTRODUCE, "Node1", "Node2", introduceContent);
+        // Given: RoutingEntry 메시지 생성
+        RoutingEntry entry = new RoutingEntry("xn76f_82d234bb", "127.0.0.1", 9003, NodeRole.PEER);
+        Message<RoutingEntry> exampleMessage = new Message<>(
+                MessageType.INTRODUCE, "Node1", "Node2", entry, System.currentTimeMillis()
+        );
 
-        // Given: 서버가 클라이언트를 기다리고 메시지 수신 준비
+        // 서버 스레드: 메시지 수신 및 검증
         Thread serverThread = new Thread(() -> {
-            try (Socket clientSocket = serverSocket.accept()) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            try (Socket clientSocket = serverSocket.accept();
+                 BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream(), "UTF-8"))) {
+
                 String receivedMessage = reader.readLine();
-                System.out.println("Received message: " + receivedMessage);
+                assertNotNull(receivedMessage, "메시지가 수신되지 않음");
 
-                // 메시지를 받으면 JsonUtils로 변환 후 Deserialize
+                // 메시지 역직렬화
                 Message<?> message = JsonUtils.fromJson(receivedMessage, new TypeReference<Message<?>>() {});
+                assertNotNull(message, "역직렬화된 메시지가 null");
 
-                // Then: 받은 메시지가 예상한 값과 일치하는지 검증
-                assertNotNull(message);
+                // 타입 및 내용 검증
                 assertEquals(MessageType.INTRODUCE, message.getType());
-                assertTrue(message.getContent() instanceof IntroduceContent);
+                assertTrue(message.getContent() instanceof RoutingEntry);
 
-                IntroduceContent content = (IntroduceContent) message.getContent();
+                RoutingEntry content = (RoutingEntry) message.getContent();
                 assertEquals("127.0.0.1", content.getIp());
                 assertEquals(9003, content.getPort());
+                assertEquals(NodeRole.PEER, content.getRole());
+                assertEquals("xn76f_82d234bb", content.getNodeId());
+
             } catch (Throwable e) {
-                threadException.set(e); // 예외 저장
+                threadException.set(e);
             }
         });
 
         serverThread.start();
-        Thread.sleep(500);
+        Thread.sleep(300); // 서버 준비 대기
 
-        // When: 클라이언트가 메시지를 서버에 전송
+        // When: 클라이언트가 메시지 전송
         try (Socket clientSocket = new Socket("localhost", 10001)) {
             messageSender.sendMessage(clientSocket, exampleMessage);
         }
 
-        serverThread.join();  // 서버 스레드 종료 대기
+        serverThread.join();
 
-        // Then: 자식 스레드에서 발생한 예외가 있다면 테스트 실패 처리
+        // Then: 예외 발생시 테스트 실패
         if (threadException.get() != null) {
             threadException.get().printStackTrace();
-            fail("Assertion failed in server thread: " + threadException.get().getMessage());
+            fail("서버 스레드에서 Assertion 실패: " + threadException.get().getMessage());
         }
     }
 }
