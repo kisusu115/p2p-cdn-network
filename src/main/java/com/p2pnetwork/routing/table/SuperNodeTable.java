@@ -30,6 +30,14 @@ public class SuperNodeTable {
         redundancyMap.put(geohash, entry);
     }
 
+    public synchronized RoutingEntry getRedundancyNode(String geohash5) {
+        return redundancyMap.get(geohash5);
+    }
+
+    public synchronized Collection<RoutingEntry> getAllRedundancyNodeEntries() {
+        return redundancyMap.values();
+    }
+
     public synchronized void removeSuperNode(String geohash5) {
         superNodeMap.remove(geohash5);
     }
@@ -37,5 +45,26 @@ public class SuperNodeTable {
     public synchronized void removeSuperNode(RoutingEntry entry) {
         String geohash = entry.getNodeId().split("_")[0];
         removeSuperNode(geohash);
+    }
+
+    public synchronized void removeRedundancy(String geohash5) {
+        redundancyMap.remove(geohash5);
+    }
+
+    public synchronized void removeRedundancy(RoutingEntry entry) {
+        String geohash = entry.getNodeId().split("_")[0];
+        removeRedundancy(geohash);
+    }
+
+    public synchronized void exchangeBootstrap(String geohash5){
+        RoutingEntry redundancyEntry = redundancyMap.get(geohash5);
+        redundancyMap.put(geohash5, superNodeMap.get(geohash5));
+        superNodeMap.put(geohash5, redundancyEntry);
+    }
+
+    public void showSuperNodeEntries() {
+        for (String geohash: superNodeMap.keySet()){
+            System.out.println(geohash + ": " +  superNodeMap.get(geohash).getNodeId());
+        }
     }
 }

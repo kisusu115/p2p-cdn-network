@@ -16,6 +16,7 @@ import lombok.Getter;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -29,6 +30,11 @@ public class Node {
     private final ExecutorService executor;
     private final MessageHandler messageHandler;
     private final MessageSender messageSender;
+
+    private Socket TCPSocket = null;
+    public void setTCPSocket(Socket TCPSocket) {
+        this.TCPSocket = TCPSocket;
+    }
 
     public Node(double lat, double lon, int port) throws Exception {
         this.ip = InetAddress.getLocalHost().getHostAddress();
@@ -69,7 +75,15 @@ public class Node {
     private void listen() {
         try (ServerSocket server = new ServerSocket(port)) {
             while (true) executor.submit(new ClientHandler(server.accept(), this));
-        } catch (IOException e) {
+        } catch (Exception e) {
+            if (this.role == NodeRole.SUPERNODE){
+                messageSender.sendMessage(this.routingTable.getRedundancyEntry(), new Message<>(
+                        MessageType.SERVERSOCKET_DEAD,
+                        nodeId,
+                        routingTable.getRedundancyEntry().getNodeId(),
+                        null,
+                        System.currentTimeMillis()));
+            }
             System.err.println("[ERROR] 포트 " + port + " 리스닝 실패: " + e.getMessage());
             throw new RuntimeException("포트 " + port + " 리스닝 실패", e);
         }
@@ -113,6 +127,11 @@ public class Node {
                 superNodeEntry.getPort(),
                 joinRequest
         );
+    }
+
+    public void setRole(NodeRole role) {
+        this.role = role;
+        System.out.println("[INFO] " + nodeId + " ▶ NodeRole 변경");
     }
 
     public void promoteToRedundancy() {

@@ -43,4 +43,10 @@ public class LocalRoutingTable {
         this.superNodeEntry = entry;
         addEntry(entry);
     }
+
+    public synchronized void exchangeBootstrap() {
+        RoutingEntry tempEntry = this.redundancyEntry;
+        this.redundancyEntry = this.superNodeEntry;
+        this.superNodeEntry = tempEntry;
+    }
 }

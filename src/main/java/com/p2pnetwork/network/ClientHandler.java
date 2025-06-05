@@ -2,10 +2,15 @@ package com.p2pnetwork.network;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.p2pnetwork.message.Message;
+import com.p2pnetwork.message.MessageType;
 import com.p2pnetwork.node.Node;
+import com.p2pnetwork.node.NodeRole;
+import com.p2pnetwork.routing.RoutingEntry;
+import com.p2pnetwork.routing.table.SuperNodeTable;
 import com.p2pnetwork.util.JsonUtils;
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
@@ -19,9 +24,105 @@ public class ClientHandler implements Runnable {
             String jsonMessage = reader.readLine();
             Message<?> message = JsonUtils.fromJson(jsonMessage, new TypeReference<Message<?>>() {});
             if (message != null) {
-                node.receiveMessage(message);
+                if (message.getType() == MessageType.TCP_CONNECT){
+                    System.out.println("[RECV] " + message.getType() + " from " + message.getSenderId());
+                    node.setTCPSocket(socket);
+                    System.out.println("[INFO] SuperNode " + node.getRoutingTable().getSuperNodeEntry().getNodeId() + "와 TCP 연결이 수립되었습니다.");
+                    SuperNodeTable.getInstance().showSuperNodeEntries();
+                    while (true) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                        int data = br.read();
+                        if (data == -1) {
+                            System.out.println("Log -1");
+
+                            System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");
+                            break;
+                        }
+                    }
+                    System.out.println("Log: Socket Check");
+                    // TODO: Redundancy가 SuperNode에 문제를 감지 → 승격 요청 --> 완료
+                    String geohash5 = node.getNodeId().split("_")[0];
+                    RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
+
+                    System.out.println("Log 0.1: " + superEntry.getNodeId());
+
+                    MessageSender sender = new MessageSender(node);
+                    if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
+                        Message<String> broadcastMsg = new Message<String>(
+                                MessageType.REQUEST_TEMP_PROMOTE,
+                                node.getNodeId(),
+                                "ALL",
+                                geohash5,
+                                System.currentTimeMillis()
+                        );
+                        SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
+                                .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                                .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    }
+                    else {
+
+                        System.out.println("Log 1.1");
+
+                        Message<String> broadcastMsg = new Message<String>(
+                                MessageType.REQUEST_PROMOTE,
+                                node.getNodeId(),
+                                "ALL",
+                                geohash5,
+                                System.currentTimeMillis()
+                        );
+                        SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
+                                .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                                .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    }
+
+                }
+                else {
+                    node.receiveMessage(message);
+                    socket.close();
+                    System.out.println("Log: Message End: " + message.getType());
+                }
             }
-        } catch (IOException e) {
+
+
+        } catch (SocketException e){
+            System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");
+            String geohash5 = node.getNodeId().split("_")[0];
+            RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
+
+            System.out.println("Log 0: " + superEntry.getNodeId());
+
+            MessageSender sender = new MessageSender(node);
+            if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
+                Message<String> broadcastMsg = new Message<String>(
+                        MessageType.REQUEST_TEMP_PROMOTE,
+                        node.getNodeId(),
+                        "ALL",
+                        geohash5,
+                        System.currentTimeMillis()
+                );
+                SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
+                        .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+            }
+            else {
+
+                System.out.println("Log 1");
+
+                SuperNodeTable.getInstance().showSuperNodeEntries();
+
+                Message<String> broadcastMsg = new Message<String>(
+                        MessageType.REQUEST_PROMOTE,
+                        node.getNodeId(),
+                        "ALL",
+                        geohash5,
+                        System.currentTimeMillis()
+                );
+                SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
+                        .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+            }
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
