@@ -1,8 +1,10 @@
 package com.p2pnetwork.network;
 
-import com.p2pnetwork.message.*;
+import com.p2pnetwork.message.Message;
+import com.p2pnetwork.message.MessageType;
 import com.p2pnetwork.message.dto.AssignSuperNodeContent;
 import com.p2pnetwork.message.dto.JoinResponseContent;
+import com.p2pnetwork.message.dto.PromotionContent;
 import com.p2pnetwork.node.Node;
 import com.p2pnetwork.node.NodeRole;
 import com.p2pnetwork.routing.RoutingEntry;
@@ -32,9 +34,6 @@ public class MessageHandler {
             case ASSIGN_SUPERNODE:
                 handleAssignSuperNode(message);
                 break;
-            case NEW_SUPERNODE_BROADCAST:
-                handleNewSuperNodeBroadcast(message);
-                break;
             case JOIN_REQUEST:
                 handleJoinRequest(message);
                 break;
@@ -44,11 +43,14 @@ public class MessageHandler {
             case NEW_PEER_BROADCAST:
                 handleNewPeerBroadcast(message);
                 break;
-            case PROMOTE_REDUNDANCY:
-                handlePromoteRedundancy(message);
+            case NEW_SUPERNODE_BROADCAST:
+                handleNewSuperNodeBroadcast(message);
                 break;
             case NEW_REDUNDANCY_BROADCAST:
                 handleNewRedundancyBroadcast(message);
+                break;
+            case PROMOTE_REDUNDANCY:
+                handlePromoteRedundancy(message);
                 break;
             case REQUEST_TCP_CONNECT:
                 handleRequestTCPConnect(message);
@@ -340,11 +342,17 @@ public class MessageHandler {
                             null,
                             System.currentTimeMillis()
                     ));
+
+                    PromotionContent content = new PromotionContent(
+                            SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
+                            SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
+                    );
+
                     sender.sendMessage(nextRedundancy, new Message<>(           // Peer를 Redundancy로 승격
                             MessageType.PROMOTE_REDUNDANCY,
                             node.getNodeId(),
                             nextRedundancy.getNodeId(),
-                            null,
+                            content,
                             System.currentTimeMillis()
                     ));
                     break;
@@ -507,11 +515,13 @@ public class MessageHandler {
         MessageSender sender = new MessageSender(node);
         if (existing == null) {
             // 슈퍼노드 승격
+            peerEntry.setRole(NodeRole.SUPERNODE);
             SuperNodeTable.getInstance().addSuperNode(peerEntry);
             AssignSuperNodeContent content = new AssignSuperNodeContent(
                     true,
                     peerEntry,
-                    SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0])
+                    SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
+                    SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
             );
             // ASSIGN_SUPERNODE 메시지 전송
             sender.sendMessage(
@@ -535,13 +545,15 @@ public class MessageHandler {
                     System.currentTimeMillis()
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
-                    .filter(entry -> !entry.getNodeId().equals(peerEntry.getNodeId())) // 새로 등록된 슈퍼노드 제외
+                    .filter(entry -> !entry.getNodeId().equals(peerEntry.getNodeId())
+                            && !entry.getNodeId().equals(node.getNodeId()))
                     .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
         } else {
             // 기존 슈퍼노드 할당
             AssignSuperNodeContent content = new AssignSuperNodeContent(
                     false,
                     existing,
+                    null,
                     null
             );
             sender.sendMessage(
@@ -581,6 +593,26 @@ public class MessageHandler {
         SuperNodeTable.getInstance().addSuperNode(newSuperNode);
     }
 
+
+    private void handleNewRedundancyBroadcast(Message<?> message) {
+        RoutingEntry redundancyEntry = (RoutingEntry) message.getContent();
+        System.out.println("[INFO] " + redundancyEntry.getNodeId() + " ▶ 새로운 Redundancy 등록");
+        SuperNodeTable.getInstance().addRedundancy(redundancyEntry);
+
+        String geohash5 = node.getNodeId().split("_")[0];
+        if (geohash5.equals(redundancyEntry.getNodeId().split("_")[0])) {
+            MessageSender sender = new MessageSender(node);
+            sender.sendMessage(redundancyEntry, new Message<>(           // TCP 연결 수립
+                    MessageType.TCP_CONNECT,
+                    node.getNodeId(),
+                    redundancyEntry.getNodeId(),
+                    null,
+                    System.currentTimeMillis()
+            ));
+            SuperNodeTable.getInstance().showSuperNodeEntries();
+        }
+    }
+
     private void handleJoinRequest(Message<?> message) {
         RoutingEntry peerEntry = (RoutingEntry) message.getContent();
         node.getRoutingTable().addEntry(peerEntry);
@@ -590,12 +622,18 @@ public class MessageHandler {
         if (isFirstPeer) {
             peerEntry.setRole(NodeRole.REDUNDANCY);
             node.getRoutingTable().setRedundancyEntry(peerEntry);
+            SuperNodeTable.getInstance().addRedundancy(peerEntry);
 
-            Message<Void> promoteMsg = new Message<>(
+            PromotionContent content = new PromotionContent(
+                    SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
+                    SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
+            );
+
+            Message<PromotionContent> promoteMsg = new Message<>(
                     MessageType.PROMOTE_REDUNDANCY,
                     node.getNodeId(),
                     peerEntry.getNodeId(),
-                    null,
+                    content,
                     System.currentTimeMillis()
             );
             new MessageSender(node).sendMessage(peerEntry.getIp(), peerEntry.getPort(), promoteMsg);
@@ -607,7 +645,8 @@ public class MessageHandler {
                     peerEntry,
                     System.currentTimeMillis()
             );
-            SuperNodeTable.getInstance().getAllSuperNodeEntries()
+            SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
+                    .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))
                     .forEach(entry -> {
                         new MessageSender(node).sendMessage(entry.getIp(), entry.getPort(), broadcastMsg);
                     });
@@ -635,9 +674,10 @@ public class MessageHandler {
                 System.currentTimeMillis()
         );
         node.getRoutingTable().getEntries().stream()
-                .filter(e -> !e.getNodeId().equals(peerEntry.getNodeId()))
-                .forEach(e -> {
-                    new MessageSender(node).sendMessage(e.getIp(), e.getPort(), broadcastMsg);
+                .filter(entry -> !entry.getNodeId().equals(peerEntry.getNodeId())
+                        && !entry.getNodeId().equals(node.getNodeId()))
+                .forEach(entry -> {
+                    new MessageSender(node).sendMessage(entry.getIp(), entry.getPort(), broadcastMsg);
                 });
     }
 
@@ -666,34 +706,27 @@ public class MessageHandler {
     }
 
     private void handlePromoteRedundancy(Message<?> message) {
+        PromotionContent content = (PromotionContent) message.getContent();
+
+        SuperNodeTable superNodeTable = SuperNodeTable.getInstance();
+        superNodeTable.clear();
+
+        if (content.getSuperNodes() != null) {
+            for (RoutingEntry entry : content.getSuperNodes()) {
+                superNodeTable.addSuperNode(entry);
+            }
+        }
+        if (content.getRedundancies() != null) {
+            for (RoutingEntry entry : content.getRedundancies()) {
+                superNodeTable.addRedundancy(entry);
+            }
+        }
         node.promoteToRedundancy();
         RoutingEntry selfEntry = new RoutingEntry(node.getNodeId(), node.getIp(), node.getPort(), NodeRole.REDUNDANCY);
         node.getRoutingTable().setRedundancyEntry(selfEntry);
-        System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격되었습니다.");
+        superNodeTable.printTable();
+        System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격 및 테이블 동기화 완료");
     }
-
-    private void handleNewRedundancyBroadcast(Message<?> message) {
-        RoutingEntry redundancyEntry = (RoutingEntry) message.getContent();
-        System.out.println("[INFO] " + redundancyEntry.getNodeId() + " ▶ 새로운 Redundancy 등록");
-        SuperNodeTable.getInstance().addRedundancy(redundancyEntry);
-
-        String geohash5 = node.getNodeId().split("_")[0];
-        if (geohash5.equals(redundancyEntry.getNodeId().split("_")[0])) {
-            MessageSender sender = new MessageSender(node);
-            sender.sendMessage(redundancyEntry, new Message<>(           // TCP 연결 수립
-                    MessageType.TCP_CONNECT,
-                    node.getNodeId(),
-                    redundancyEntry.getNodeId(),
-                    null,
-                    System.currentTimeMillis()
-            ));
-            SuperNodeTable.getInstance().showSuperNodeEntries();
-        }
-    }
-
-
-
-
 
     /*private void handleSuperNodeRevived(Message<?> message) {           // message에 이전 SuperNode의 RoutingEntry가 들어가 있음
         RoutingEntry oldSuperEntry = (RoutingEntry) message.getContent();

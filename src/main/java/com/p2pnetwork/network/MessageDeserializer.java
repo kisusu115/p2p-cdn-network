@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.p2pnetwork.message.Message;
 import com.p2pnetwork.message.MessageType;
+import com.p2pnetwork.message.dto.PromotionContent;
 import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.message.dto.AssignSuperNodeContent;
 import com.p2pnetwork.message.dto.JoinResponseContent;
@@ -38,6 +39,9 @@ public class MessageDeserializer extends StdDeserializer<Message<?>> {
                 break;
             case JOIN_RESPONSE:
                 content = p.getCodec().treeToValue(contentNode, JoinResponseContent.class);
+                break;
+            case PROMOTE_REDUNDANCY:
+                content = p.getCodec().treeToValue(contentNode, PromotionContent.class);
                 break;
             default:
                 break;

@@ -66,7 +66,7 @@ public class Node {
                 SuperNodeTable.getInstance().addSuperNode(
                         new RoutingEntry(
                                 entry.getNodeId(), entry.getIp(), entry.getPort(),
-                                NodeRole.SUPERNODE
+                                NodeRole.BOOTSTRAP
                         )
                 )
         );

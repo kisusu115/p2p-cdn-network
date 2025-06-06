@@ -67,4 +67,22 @@ public class SuperNodeTable {
             System.out.println(geohash + ": " +  superNodeMap.get(geohash).getNodeId());
         }
     }
+
+    public void clear() {
+        superNodeMap.clear();
+        redundancyMap.clear();
+    }
+
+    public void printTable() {
+        System.out.println("==== [SuperNodeTable] ====");
+        System.out.println("[슈퍼노드]");
+        superNodeMap.forEach((geohash, entry) ->
+                System.out.println("  " + geohash + " : " + entry.getNodeId() + " (" + entry.getRole() + ")")
+        );
+        System.out.println("[레둔던시]");
+        redundancyMap.forEach((geohash, entry) ->
+                System.out.println("  " + geohash + " : " + entry.getNodeId() + " (" + entry.getRole() + ")")
+        );
+        System.out.println("==========================");
+    }
 }

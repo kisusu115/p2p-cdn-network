@@ -77,7 +77,7 @@ class MessageDeserializationTest {
 
         // When: 클라이언트가 메시지 전송
         try (Socket clientSocket = new Socket("localhost", 10001)) {
-            messageSender.sendMessage(clientSocket, exampleMessage);
+            messageSender.sendSocketMessage(clientSocket, exampleMessage);
         }
 
         serverThread.join();
