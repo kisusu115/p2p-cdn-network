@@ -40,12 +40,12 @@ public class ClientHandler implements Runnable {
             System.out.println("[RECV] " + message.getType() + " from " + message.getSenderId());
             node.setTCPSocket(socket);
             System.out.println("[INFO] SuperNode " + node.getRoutingTable().getSuperNodeEntry().getNodeId() + "와 TCP 연결이 수립되었습니다.");
-            SuperNodeTable.getInstance().showSuperNodeEntries();
+            SuperNodeTable.getInstance().printTable();
             while (true) {
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 int data = br.read();
                 if (data == -1) {
-                    System.out.println("Log -1");
+                    System.out.println("Log: -1");
 
                     System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");
                     break;
@@ -56,7 +56,7 @@ public class ClientHandler implements Runnable {
             String geohash5 = node.getNodeId().split("_")[0];
             RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
 
-            System.out.println("Log 0.1: " + superEntry.getNodeId());
+            System.out.println("Log: 0.1 - " + superEntry.getNodeId());
 
             MessageSender sender = new MessageSender(node);
             if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
@@ -73,7 +73,7 @@ public class ClientHandler implements Runnable {
             }
             else {
 
-                System.out.println("Log 1.1");
+                System.out.println("Log: 1.1");
 
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,
@@ -91,8 +91,6 @@ public class ClientHandler implements Runnable {
             String geohash5 = node.getNodeId().split("_")[0];
             RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
 
-            System.out.println("Log 0: " + superEntry.getNodeId());
-
             MessageSender sender = new MessageSender(node);
             if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
                 Message<String> broadcastMsg = new Message<String>(
@@ -107,12 +105,7 @@ public class ClientHandler implements Runnable {
                         .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
             }
             else {
-
-                System.out.println("Log 1");
-
-                SuperNodeTable.getInstance().showSuperNodeEntries();
-
-                Message<String> broadcastMsg = new Message<String>(
+                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,
                         node.getNodeId(),
                         "ALL",

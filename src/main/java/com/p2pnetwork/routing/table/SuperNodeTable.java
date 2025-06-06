@@ -62,12 +62,6 @@ public class SuperNodeTable {
         superNodeMap.put(geohash5, redundancyEntry);
     }
 
-    public void showSuperNodeEntries() {
-        for (String geohash: superNodeMap.keySet()){
-            System.out.println(geohash + ": " +  superNodeMap.get(geohash).getNodeId());
-        }
-    }
-
     public void clear() {
         superNodeMap.clear();
         redundancyMap.clear();

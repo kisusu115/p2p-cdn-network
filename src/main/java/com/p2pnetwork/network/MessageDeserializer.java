@@ -43,6 +43,12 @@ public class MessageDeserializer extends StdDeserializer<Message<?>> {
             case PROMOTE_REDUNDANCY:
                 content = p.getCodec().treeToValue(contentNode, PromotionContent.class);
                 break;
+            case REQUEST_PROMOTE, BOOTSTRAP_REPLACEMENT, PROMOTED_SUPERNODE_BROADCAST, UPDATE_SUPERNODE_TABLE_BOOTSTRAP, BOOTSTRAP_WORKING:
+                content = p.getCodec().treeToValue(contentNode, String.class);
+                break;
+            case PROMOTED_REDUNDANCY_BROADCAST, UPDATE_SUPERNODE_TABLE_SUPER:
+                content = p.getCodec().treeToValue(contentNode, RoutingEntry.class);
+                break;
             default:
                 break;
         }
