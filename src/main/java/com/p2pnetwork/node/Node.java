@@ -101,7 +101,6 @@ public class Node {
         this.role = NodeRole.SUPERNODE;
         System.out.println("[INFO] " + nodeId + " ▶ SUPERNODE 승격");
         RoutingEntry entry = new RoutingEntry(nodeId, ip, port, NodeRole.SUPERNODE);
-        SuperNodeTable.getInstance().addSuperNode(entry);
 
         // 본인을 LocalRoutingTable의 SuperNodeEntry 지정 및 로컬 라우팅테이블에 추가
         this.routingTable.setSuperNodeEntry(entry);
@@ -122,7 +121,7 @@ public class Node {
                 myEntry,
                 System.currentTimeMillis()
         );
-        new MessageSender(this).sendMessage(
+        messageSender.sendMessage(
                 superNodeEntry.getIp(),
                 superNodeEntry.getPort(),
                 joinRequest

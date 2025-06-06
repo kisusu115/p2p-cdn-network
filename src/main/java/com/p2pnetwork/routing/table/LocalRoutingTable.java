@@ -31,11 +31,10 @@ public class LocalRoutingTable {
         return localRoutingMap.values();
     }
 
-    public void mergeEntries(Collection<RoutingEntry> entries) {
+    public void replaceEntries(Collection<RoutingEntry> entries) {
+        localRoutingMap.clear(); // 기존 엔트리 전체 삭제
         for (RoutingEntry entry : entries) {
-            if (!entry.getNodeId().equals(selfId)) {
-                localRoutingMap.putIfAbsent(entry.getNodeId(), entry);
-            }
+            localRoutingMap.put(entry.getNodeId(), entry); // 새 엔트리로 교체
         }
     }
 
@@ -48,5 +47,16 @@ public class LocalRoutingTable {
         RoutingEntry tempEntry = this.redundancyEntry;
         this.redundancyEntry = this.superNodeEntry;
         this.superNodeEntry = tempEntry;
+    }
+
+    public void printTable() {
+        System.out.println("==== [LocalRoutingTable] ====");
+        System.out.println("[슈퍼노드] : "+superNodeEntry.getNodeId());
+        System.out.println("[레둔던시] : "+redundancyEntry.getNodeId());
+        System.out.println("[전체 노드]");
+        localRoutingMap.forEach((geohash, entry) ->
+                System.out.println("  " + entry.getNodeId() + " : (" + entry.getRole() + ")")
+        );
+        System.out.println("=============================");
     }
 }

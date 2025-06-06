@@ -575,10 +575,15 @@ public class MessageHandler {
         if (content.isPromote()) {
             node.promoteToSuperNode();
             System.out.println("[INFO] " + node.getNodeId() + " ▶ 새로운 슈퍼노드로 승격되었습니다.");
-            if (content.getSuperNodeTable() != null) {
-                Arrays.stream(content.getSuperNodeTable())
+            if (content.getSuperNodes() != null) {
+                Arrays.stream(content.getSuperNodes())
                         .forEach(SuperNodeTable.getInstance()::addSuperNode);
                 System.out.println("[INFO] 슈퍼노드 테이블 갱신");
+            }
+            if (content.getRedundancies() != null) {
+                Arrays.stream(content.getRedundancies())
+                        .forEach(SuperNodeTable.getInstance()::addRedundancy);
+                System.out.println("[INFO] 레둔던시 테이블 갱신");
             }
         } else {
             node.setSuperNode(content.getSuperNodeEntry());
@@ -622,6 +627,7 @@ public class MessageHandler {
         if (isFirstPeer) {
             peerEntry.setRole(NodeRole.REDUNDANCY);
             node.getRoutingTable().setRedundancyEntry(peerEntry);
+            node.getRoutingTable().addEntry(peerEntry);
             SuperNodeTable.getInstance().addRedundancy(peerEntry);
 
             PromotionContent content = new PromotionContent(
@@ -684,8 +690,8 @@ public class MessageHandler {
     private void handleJoinResponse(Message<?> message) {
         JoinResponseContent content = (JoinResponseContent) message.getContent();
         if (content.getRoutingTable() != null) {
-            node.getRoutingTable().mergeEntries(Arrays.asList(content.getRoutingTable()));
-            System.out.println("[INFO] 라우팅 테이블 병합");
+            node.getRoutingTable().replaceEntries(Arrays.asList(content.getRoutingTable()));
+            System.out.println("[INFO] 라우팅 테이블 교체 완료");
         }
 
         if (content.getSuperNodeEntry() != null) {
@@ -722,9 +728,8 @@ public class MessageHandler {
             }
         }
         node.promoteToRedundancy();
-        RoutingEntry selfEntry = new RoutingEntry(node.getNodeId(), node.getIp(), node.getPort(), NodeRole.REDUNDANCY);
-        node.getRoutingTable().setRedundancyEntry(selfEntry);
         superNodeTable.printTable();
+        node.getRoutingTable().printTable();
         System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격 및 테이블 동기화 완료");
     }
 
