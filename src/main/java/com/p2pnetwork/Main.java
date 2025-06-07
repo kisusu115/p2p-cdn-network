@@ -1,5 +1,7 @@
 package com.p2pnetwork;
 
+import com.p2pnetwork.message.Message;
+import com.p2pnetwork.message.MessageType;
 import com.p2pnetwork.node.Node;
 
 import java.util.Map;
@@ -98,7 +100,8 @@ public class Main {
             System.exit(1);
         }
         Node node = new Node(coordinates[0], coordinates[1], port);
-        // node.부트스트랩_복구_처리_메소드();
+        node.start();
+        node.bootstrapRevival();
         System.out.println("[INFO] 부트스트랩 노드 복구됨: " + node.getNodeId());
     }
 

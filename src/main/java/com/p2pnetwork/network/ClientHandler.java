@@ -39,20 +39,26 @@ public class ClientHandler implements Runnable {
             // MessageType.TCP_CONNECT 인 경우 시행 로직
             System.out.println("[RECV] " + message.getType() + " from " + message.getSenderId());
             node.setTCPSocket(socket);
-            System.out.println("[INFO] SuperNode " + node.getRoutingTable().getSuperNodeEntry().getNodeId() + "와 TCP 연결이 수립되었습니다.");
+            /*System.out.println("[INFO] SuperNode " + SuperNodeTable.getInstance().getSuperNode(node.getNodeId().split("_")[0]).getNodeId()
+                    + "와 TCP 연결이 수립되었습니다.");
+            System.out.println("[INFO] SuperNode " + node.getRoutingTable().getSuperNodeEntry().getNodeId()
+                    + "와 TCP 연결이 수립되었습니다.");*/
+            System.out.println("[INFO] SuperNode와 TCP 연결이 수립되었습니다.");
+
             while (true) {
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 int data = br.read();
                 if (data == -1) {
-                    System.out.println("Log: -1");
+                    /*System.out.println("Log: -1");
 
-                    System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");
+                    System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");*/
                     break;
                 }
             }
-            System.out.println("Log: Socket Check");
+
+            System.out.println("Log: Socket Death");
             // TODO: Redundancy가 SuperNode에 문제를 감지 → 승격 요청 --> 완료
-            String geohash5 = node.getNodeId().split("_")[0];
+            /*String geohash5 = node.getNodeId().split("_")[0];
             RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
 
             System.out.println("Log: 0.1 - " + superEntry.getNodeId());
@@ -84,7 +90,8 @@ public class ClientHandler implements Runnable {
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                         .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
-            }
+            }*/
+
         } catch (SocketException e){
             System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");
             String geohash5 = node.getNodeId().split("_")[0];

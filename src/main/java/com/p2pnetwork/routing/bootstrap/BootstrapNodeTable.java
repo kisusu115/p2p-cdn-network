@@ -20,7 +20,7 @@ public class BootstrapNodeTable {
             // 서울
             String seoulId = NodeIdGenerator.generateNodeId(37.5665, 126.9780, localIp, 10001);
             String seoulGeohash = seoulId.split("_")[0];
-            RoutingEntry seoulSuper = new RoutingEntry(seoulId, localIp, 10001, NodeRole.SUPERNODE);
+            RoutingEntry seoulSuper = new RoutingEntry(seoulId, localIp, 10001, NodeRole.BOOTSTRAP);
             staticBootstrapMap.put(seoulGeohash, seoulSuper);
             SuperNodeTable.getInstance().addSuperNode(seoulSuper);
 
@@ -31,7 +31,7 @@ public class BootstrapNodeTable {
             // 뉴욕
             String nyId = NodeIdGenerator.generateNodeId(40.7128, -74.0060, localIp, 10002);
             String nyGeohash = nyId.split("_")[0];
-            RoutingEntry nySuper = new RoutingEntry(nyId, localIp, 10002, NodeRole.SUPERNODE);
+            RoutingEntry nySuper = new RoutingEntry(nyId, localIp, 10002, NodeRole.BOOTSTRAP);
             staticBootstrapMap.put(nyGeohash, nySuper);
             SuperNodeTable.getInstance().addSuperNode(nySuper);
 
@@ -42,7 +42,7 @@ public class BootstrapNodeTable {
             // 런던
             String londonId = NodeIdGenerator.generateNodeId(51.5074, -0.1278, localIp, 10003);
             String londonGeohash = londonId.split("_")[0];
-            RoutingEntry londonSuper = new RoutingEntry(londonId, localIp, 10003, NodeRole.SUPERNODE);
+            RoutingEntry londonSuper = new RoutingEntry(londonId, localIp, 10003, NodeRole.BOOTSTRAP);
             staticBootstrapMap.put(londonGeohash, londonSuper);
             SuperNodeTable.getInstance().addSuperNode(londonSuper);
 
@@ -53,7 +53,7 @@ public class BootstrapNodeTable {
             // 시드니
             String sydneyId = NodeIdGenerator.generateNodeId(-33.8688, 151.2093, localIp, 10004);
             String sydneyGeohash = sydneyId.split("_")[0];
-            RoutingEntry sydneySuper = new RoutingEntry(sydneyId, localIp, 10004, NodeRole.SUPERNODE);
+            RoutingEntry sydneySuper = new RoutingEntry(sydneyId, localIp, 10004, NodeRole.BOOTSTRAP);
             staticBootstrapMap.put(sydneyGeohash, sydneySuper);
             SuperNodeTable.getInstance().addSuperNode(sydneySuper);
 

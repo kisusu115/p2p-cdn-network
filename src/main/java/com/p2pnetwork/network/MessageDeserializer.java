@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.p2pnetwork.message.Message;
 import com.p2pnetwork.message.MessageType;
 import com.p2pnetwork.message.dto.PromotionContent;
+import com.p2pnetwork.message.dto.SyncAllTableContent;
 import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.message.dto.AssignSuperNodeContent;
 import com.p2pnetwork.message.dto.JoinResponseContent;
@@ -43,11 +44,15 @@ public class MessageDeserializer extends StdDeserializer<Message<?>> {
             case PROMOTE_REDUNDANCY:
                 content = p.getCodec().treeToValue(contentNode, PromotionContent.class);
                 break;
-            case REQUEST_PROMOTE, BOOTSTRAP_REPLACEMENT, PROMOTED_SUPERNODE_BROADCAST, UPDATE_SUPERNODE_TABLE_BOOTSTRAP, BOOTSTRAP_WORKING:
+            case REQUEST_TEMP_PROMOTE, REQUEST_PROMOTE, BOOTSTRAP_REPLACEMENT, BOOTSTRAP_WORKING,
+                 PROMOTED_SUPERNODE_BROADCAST, UPDATE_SUPERNODE_TABLE_BOOTSTRAP:
                 content = p.getCodec().treeToValue(contentNode, String.class);
                 break;
             case PROMOTED_REDUNDANCY_BROADCAST, UPDATE_SUPERNODE_TABLE_SUPER:
                 content = p.getCodec().treeToValue(contentNode, RoutingEntry.class);
+                break;
+            case BOOTSTRAP_TABLE_SYNC:
+                content = p.getCodec().treeToValue(contentNode, SyncAllTableContent.class);
                 break;
             default:
                 break;

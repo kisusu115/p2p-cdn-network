@@ -17,6 +17,7 @@ public enum MessageType {
     DENY_PROMOTE,               // SuperNode → Redundancy: 승격 불허
     BOOTSTRAP_REPLACEMENT,      // Redundancy → SuperNode들과 Peer들: Bootstrap 대신 Redundancy를 사용하라 알림
     BOOTSTRAP_REVIVED,          // Bootstrap → Redundancy: Bootstrap이 복구됨을 알림
+    BOOTSTRAP_TABLE_SYNC,       // Redundancy → Bootstrap: Bootstrap이 복구되어 SuperNodeTable과 LocalRoutingTable을 전송해줌
     BOOTSTRAP_WORKING,          // Redundancy → SuperNode들과 Peer들: 다시 Bootstrap을 사용하라 알림
     REQUEST_PROMOTE,            // Redundancy → SuperNode들: SuperNode가 죽어 자신의 승격을 요청
     PROMOTED_SUPERNODE_BROADCAST,       // SuperNode → SuperNode들과 Peer들: 자신이 승격되어 table을 변경하게 만듦

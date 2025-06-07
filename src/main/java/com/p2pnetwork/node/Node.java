@@ -9,6 +9,7 @@ import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.routing.bootstrap.BootstrapNodeManager;
 import com.p2pnetwork.routing.bootstrap.BootstrapNodeTable;
 import com.p2pnetwork.routing.table.LocalRoutingTable;
+import com.p2pnetwork.routing.table.SuperNodeTable;
 import com.p2pnetwork.util.NodeIdGenerator;
 import lombok.Getter;
 
@@ -142,5 +143,26 @@ public class Node {
 
     public void promoteToRedundancy() {
         this.role = NodeRole.REDUNDANCY;
+    }
+
+    public void bootstrapRevival(){
+        this.role = NodeRole.BOOTSTRAP;
+        String geohash5 = nodeId.split("_")[0];
+        RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getRedundancyNode(geohash5);
+        messageSender.sendMessage(redundancyEntry, new Message<>(
+                MessageType.BOOTSTRAP_REVIVED,
+                nodeId,
+                redundancyEntry.getNodeId(),
+                null,
+                System.currentTimeMillis()
+        ));
+
+        messageSender.sendMessage(redundancyEntry, new Message<>(
+                MessageType.TCP_CONNECT,
+                nodeId,
+                redundancyEntry.getNodeId(),
+                null,
+                System.currentTimeMillis()
+        ));
     }
 }
