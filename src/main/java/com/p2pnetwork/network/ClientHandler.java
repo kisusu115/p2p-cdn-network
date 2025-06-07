@@ -32,7 +32,7 @@ public class ClientHandler implements Runnable {
             if (message.getType() != MessageType.TCP_CONNECT){
                 node.receiveMessage(message);
                 socket.close();
-                System.out.println("Log: Message End: " + message.getType());
+                System.out.println("[MHED] Message Handler End: " + message.getType() + " 메시지 처리 종료");
                 return;
             }
 
@@ -56,12 +56,11 @@ public class ClientHandler implements Runnable {
                 }
             }
 
-            System.out.println("Log: Socket Death");
+            //System.out.println("Log: Socket Death");
             // TODO: Redundancy가 SuperNode에 문제를 감지 → 승격 요청 --> 완료
             /*String geohash5 = node.getNodeId().split("_")[0];
             RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
 
-            System.out.println("Log: 0.1 - " + superEntry.getNodeId());
 
             MessageSender sender = new MessageSender(node);
             if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
@@ -77,8 +76,6 @@ public class ClientHandler implements Runnable {
                         .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
             }
             else {
-
-                System.out.println("Log: 1.1");
 
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,

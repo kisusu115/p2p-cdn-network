@@ -27,5 +27,7 @@ public enum MessageType {
     //DEMOTE_PEER,                // SuperNode → (이전) SuperNode: Peer로 강등
     CHECK_SUPERNODE,            // Peer → Redundancy: Redundancy에게 SuperNode가 죽은 것 같다고 알림
     UPDATE_SUPERNODE_TABLE_SUPER,       // SuperNode → Redundancy: SuperNodeTable을 update하게 만듦
-    UPDATE_SUPERNODE_TABLE_BOOTSTRAP    // SuperNode → Redundancy: SuperNodeTable을 update하게 만듦
+    UPDATE_SUPERNODE_TABLE_BOOTSTRAP,   // SuperNode → Redundancy: SuperNodeTable을 update하게 만듦
+    REDUNDANCY_DISCONNECT,       // SuperNode → Self: Redundancy와 TCP 연결이 끊어져 작업을 수행
+    REMOVE_REDUNDANCY_BROADCAST         // SuperNode → SuperNode들과 Peer들: Table에서 Redundancy를 지우라 알림
 }

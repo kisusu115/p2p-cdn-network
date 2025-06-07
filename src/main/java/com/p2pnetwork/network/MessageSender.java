@@ -6,7 +6,10 @@ import com.p2pnetwork.node.Node;
 import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.util.JsonUtils;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
 
 public class MessageSender {
     private final Node node;
@@ -33,9 +36,7 @@ public class MessageSender {
                 if (message.getType() == MessageType.TCP_CONNECT) {
                     node.setTCPSocket(socket);
                 }
-                //System.out.println("Log: " + socket.isClosed());
                 sendSocketMessage(socket, message);
-                //System.out.println("Log: " + socket.isClosed());
             } catch (IOException e) {
                 System.err.println("[ERROR] " + message.getType() + " 전송 실패: " + e.getMessage());
             }
@@ -49,9 +50,25 @@ public class MessageSender {
             writer.newLine();
             writer.flush();
             System.out.println("[SEND] " + message.getType() + " to " + message.getTargetId());
-            //System.out.println("Log: " + socket.isClosed());
+
             if (message.getType() == MessageType.TCP_CONNECT) {
-                while (true) {}
+                try {
+                    while (true) {
+                        BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                        int data = br.read();
+                        if (data == -1) {
+                            break;
+                        }
+                    }
+                } catch (SocketException e){
+                    this.sendMessage(node.getIp(), node.getPort(), new Message<>(
+                            MessageType.REDUNDANCY_DISCONNECT,
+                            node.getNodeId(),
+                            node.getNodeId(),
+                            null,
+                            System.currentTimeMillis()
+                    ));
+                }
             }
         } catch (IOException e) {
             System.err.println("[ERROR] 메시지 직렬화 실패: " + e.getMessage());
