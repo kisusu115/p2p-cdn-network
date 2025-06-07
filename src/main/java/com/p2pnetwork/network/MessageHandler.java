@@ -40,8 +40,6 @@ public class MessageHandler {
                 break;
             case JOIN_RESPONSE:
                 handleJoinResponse(message);
-                SuperNodeTable.getInstance().printTable();
-                node.getRoutingTable().printTable();
                 break;
             case NEW_PEER_BROADCAST:
                 handleNewPeerBroadcast(message);
@@ -599,6 +597,20 @@ public class MessageHandler {
             );
             messageSender.sendMessage(peerEntry.getIp(), peerEntry.getPort(), connectMsg);
 
+            JoinResponseContent localRoutingTableContent = new JoinResponseContent(
+                    node.getRoutingTable().getSuperNodeEntry(),
+                    node.getRoutingTable().getRedundancyEntry(),
+                    node.getRoutingTable().getEntries().toArray(new RoutingEntry[0])
+            );
+            Message<JoinResponseContent> localMsg = new Message<>(
+                    MessageType.JOIN_RESPONSE,
+                    node.getNodeId(),
+                    peerEntry.getNodeId(),
+                    localRoutingTableContent,
+                    System.currentTimeMillis()
+            );
+            messageSender.sendMessage(peerEntry.getIp(), peerEntry.getPort(), localMsg);
+
             return;
         }
 
@@ -800,6 +812,8 @@ public class MessageHandler {
             node.getRoutingTable().setRedundancyEntry(content.getRedundancyEntry());
             System.out.println("[INFO] 레둔던시 엔트리 갱신");
         }
+        SuperNodeTable.getInstance().printTable();
+        node.getRoutingTable().printTable();
     }
 
     private void handleNewPeerBroadcast(Message<?> message) {

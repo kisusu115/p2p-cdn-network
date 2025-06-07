@@ -50,6 +50,7 @@ public class Node {
 
         if (isBootstrap()) {
             this.role = NodeRole.BOOTSTRAP;
+            routingTable.setSuperNodeEntry(RoutingEntry.from(this));
         } else if (isRedundancy()) {
             this.role = NodeRole.REDUNDANCY;
             boolean connected = BootstrapNodeManager.connectRedundancy(this);
