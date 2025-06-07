@@ -9,11 +9,9 @@ import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.routing.bootstrap.BootstrapNodeManager;
 import com.p2pnetwork.routing.bootstrap.BootstrapNodeTable;
 import com.p2pnetwork.routing.table.LocalRoutingTable;
-import com.p2pnetwork.routing.table.SuperNodeTable;
 import com.p2pnetwork.util.NodeIdGenerator;
 import lombok.Getter;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -37,7 +35,7 @@ public class Node {
     }
 
     public Node(double lat, double lon, int port) throws Exception {
-        this.ip = InetAddress.getLocalHost().getHostAddress();
+        this.ip = InetAddress.getLocalHost().getHostAddress();;
         this.port = port;
         this.nodeId = NodeIdGenerator.generateNodeId(lat, lon, ip, port);
         this.role = NodeRole.PEER;
@@ -49,9 +47,16 @@ public class Node {
 
     public void start() {
         executor.submit(this::listen);
-        if (BootstrapNodeTable.isBootstrapPort(port)) {
+
+        if (isBootstrap()) {
             this.role = NodeRole.BOOTSTRAP;
-            initializeSuperNodeTableForBootstrap();
+        } else if (isRedundancy()) {
+            this.role = NodeRole.REDUNDANCY;
+            boolean connected = BootstrapNodeManager.connectRedundancy(this);
+            if (!connected) {
+                System.err.println("[ERROR] 대응되는 부트스트랩 노드에 연결할 수 없습니다. 프로그램을 종료합니다.");
+                System.exit(1);
+            }
         } else {
             boolean connected = BootstrapNodeManager.connect(this);
             if (!connected) {
@@ -59,17 +64,6 @@ public class Node {
                 System.exit(1);
             }
         }
-    }
-
-    private void initializeSuperNodeTableForBootstrap() {
-        BootstrapNodeTable.getAll().forEach(entry ->
-                SuperNodeTable.getInstance().addSuperNode(
-                        new RoutingEntry(
-                                entry.getNodeId(), entry.getIp(), entry.getPort(),
-                                NodeRole.BOOTSTRAP
-                        )
-                )
-        );
     }
 
     private void listen() {
@@ -87,6 +81,18 @@ public class Node {
             System.err.println("[ERROR] 포트 " + port + " 리스닝 실패: " + e.getMessage());
             throw new RuntimeException("포트 " + port + " 리스닝 실패", e);
         }
+    }
+
+    private boolean isBootstrap() {
+        String geohash5 = nodeId.split("_")[0];
+        RoutingEntry bootstrap = BootstrapNodeTable.getBootstrapByGeohash(geohash5);
+        return bootstrap != null && port >= 10001 && port <= 10004;
+    }
+
+    private boolean isRedundancy() {
+        String geohash5 = nodeId.split("_")[0];
+        RoutingEntry bootstrap = BootstrapNodeTable.getBootstrapByGeohash(geohash5);
+        return bootstrap != null && port >= 10005 && port <= 10008;
     }
 
     public void receiveMessage(Message<?> message) {

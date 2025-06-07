@@ -40,7 +40,6 @@ public class ClientHandler implements Runnable {
             System.out.println("[RECV] " + message.getType() + " from " + message.getSenderId());
             node.setTCPSocket(socket);
             System.out.println("[INFO] SuperNode " + node.getRoutingTable().getSuperNodeEntry().getNodeId() + "와 TCP 연결이 수립되었습니다.");
-            SuperNodeTable.getInstance().printTable();
             while (true) {
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 int data = br.read();

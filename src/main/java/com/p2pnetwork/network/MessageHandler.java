@@ -40,6 +40,8 @@ public class MessageHandler {
                 break;
             case JOIN_RESPONSE:
                 handleJoinResponse(message);
+                SuperNodeTable.getInstance().printTable();
+                node.getRoutingTable().printTable();
                 break;
             case NEW_PEER_BROADCAST:
                 handleNewPeerBroadcast(message);
@@ -571,12 +573,36 @@ public class MessageHandler {
     // 부트스트랩 노드에서만 동작
     private void handleIntroduce(Message<?> message) {
         if (!node.hasAtLeastRole(NodeRole.BOOTSTRAP)) return;
-        RoutingEntry peerEntry = (RoutingEntry) message.getContent();
-        String geohash5 = peerEntry.getNodeId().split("_")[0];
-        RoutingEntry existing = SuperNodeTable.getInstance().getSuperNode(geohash5);
+        MessageSender messageSender = new MessageSender(node);
 
-        MessageSender sender = new MessageSender(node);
-        if (existing == null) {
+        RoutingEntry peerEntry = (RoutingEntry) message.getContent();
+        String senderId = peerEntry.getNodeId();
+        String geohash5 = senderId.split("_")[0];
+
+        RoutingEntry existSuperNode = SuperNodeTable.getInstance().getSuperNode(geohash5);
+
+        boolean isRedundancyIntroduced =
+                peerEntry.getRole() == NodeRole.REDUNDANCY &&
+                        existSuperNode != null &&
+                        existSuperNode.getNodeId().equals(node.getNodeId());
+
+        if (isRedundancyIntroduced) {
+            node.getRoutingTable().setRedundancyEntry(peerEntry);
+            node.getRoutingTable().addEntry(peerEntry);
+
+            Message<Void> connectMsg = new Message<>(
+                    MessageType.TCP_CONNECT,
+                    node.getNodeId(),
+                    peerEntry.getNodeId(),
+                    null,
+                    System.currentTimeMillis()
+            );
+            messageSender.sendMessage(peerEntry.getIp(), peerEntry.getPort(), connectMsg);
+
+            return;
+        }
+
+        if (existSuperNode == null) {
             // 슈퍼노드 승격
             peerEntry.setRole(NodeRole.SUPERNODE);
             SuperNodeTable.getInstance().addSuperNode(peerEntry);
@@ -587,7 +613,7 @@ public class MessageHandler {
                     SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
             );
             // ASSIGN_SUPERNODE 메시지 전송
-            sender.sendMessage(
+            messageSender.sendMessage(
                     peerEntry.getIp(),
                     peerEntry.getPort(),
                     new Message<>(
@@ -610,16 +636,16 @@ public class MessageHandler {
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(peerEntry.getNodeId())
                             && !entry.getNodeId().equals(node.getNodeId()))
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> messageSender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
         } else {
             // 기존 슈퍼노드 할당
             AssignSuperNodeContent content = new AssignSuperNodeContent(
                     false,
-                    existing,
+                    existSuperNode,
                     null,
                     null
             );
-            sender.sendMessage(
+            messageSender.sendMessage(
                     peerEntry.getIp(),
                     peerEntry.getPort(),
                     new Message<>(
@@ -799,8 +825,6 @@ public class MessageHandler {
             }
         }
         node.promoteToRedundancy();
-        superNodeTable.printTable();
-        node.getRoutingTable().printTable();
         System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격 및 테이블 동기화 완료");
     }
 
