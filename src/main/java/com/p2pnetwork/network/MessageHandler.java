@@ -882,6 +882,7 @@ public class MessageHandler {
         String geohash5 = senderId.split("_")[0];
 
         RoutingEntry existSuperNode = SuperNodeTable.getInstance().getSuperNode(geohash5);
+        RoutingEntry existRedundancy = SuperNodeTable.getInstance().getRedundancyNode(geohash5);
 
         boolean isRedundancyIntroduced =
                 peerEntry.getRole() == NodeRole.REDUNDANCY &&
@@ -918,7 +919,7 @@ public class MessageHandler {
             return;
         }
 
-        if (existSuperNode == null) {
+        if ((existSuperNode == null) || (existRedundancy == null && !checkAlive(existSuperNode))) {
             // 슈퍼노드 승격
             peerEntry.setRole(NodeRole.SUPERNODE);
             SuperNodeTable.getInstance().addSuperNode(peerEntry);
