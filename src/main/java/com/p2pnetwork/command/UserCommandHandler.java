@@ -68,6 +68,11 @@ public class UserCommandHandler implements Runnable {
 
                 RoutingEntry redundancyEntry = node.getRoutingTable().getRedundancyEntry();
 
+                if(redundancyEntry == null) {
+                    FileMetadataTable.getInstance().printTable();
+                    return;
+                }
+
                 SyncFileMetadataContent content = new SyncFileMetadataContent(fileHash, RoutingEntry.from(node));
 
                 Message<SyncFileMetadataContent> syncMessage = new Message<>(

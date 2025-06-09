@@ -291,7 +291,9 @@ public class MessageHandler {
 
                 node.getRoutingTable().getSuperNodeEntry(),
                 node.getRoutingTable().getRedundancyEntry(),
-                node.getRoutingTable().getEntries().toArray(new RoutingEntry[0])
+                node.getRoutingTable().getEntries().toArray(new RoutingEntry[0]),
+
+                FileMetadataTable.getInstance().getMetadataMap()
         );
 
         sender.sendMessage(bootstrapEntry, new Message<>(
@@ -353,8 +355,14 @@ public class MessageHandler {
             System.out.println("[INFO] 레둔던시 엔트리 갱신");
         }
 
+        if (content.getMetadataMap() != null) {
+            FileMetadataTable.getInstance().setMetadataMap(content.getMetadataMap());
+            System.out.println("[INFO] 파일 메타데이터 테이블 갱신");
+        }
+
         SuperNodeTable.getInstance().printTable();
         node.getRoutingTable().printTable();
+        FileMetadataTable.getInstance().printTable();
     }
 
     private void handleBootstrapReplacement(Message<?> message) {
@@ -513,7 +521,8 @@ public class MessageHandler {
 
                     PromotionContent content = new PromotionContent(
                             SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
-                            SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
+                            SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0]),
+                            FileMetadataTable.getInstance().getMetadataMap()
                     );
 
                     sender.sendMessage(nextRedundancy, new Message<>(           // Peer를 Redundancy로 승격
@@ -794,7 +803,8 @@ public class MessageHandler {
 
                     PromotionContent content = new PromotionContent(
                             SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
-                            SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
+                            SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0]),
+                            FileMetadataTable.getInstance().getMetadataMap()
                     );
 
                     sender.sendMessage(nextRedundancy, new Message<>(           // Peer를 Redundancy로 승격
@@ -1085,7 +1095,8 @@ public class MessageHandler {
 
             PromotionContent content = new PromotionContent(
                     SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
-                    SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0])
+                    SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0]),
+                    FileMetadataTable.getInstance().getMetadataMap()
             );
 
             Message<PromotionContent> promoteMsg = new Message<>(
@@ -1164,7 +1175,6 @@ public class MessageHandler {
             node.getRoutingTable().setRedundancyEntry(content.getRedundancyEntry());
             System.out.println("[INFO] 레둔던시 엔트리 갱신");
         }
-        SuperNodeTable.getInstance().printTable();
         node.getRoutingTable().printTable();
     }
 
@@ -1190,12 +1200,17 @@ public class MessageHandler {
                 superNodeTable.addRedundancy(entry);
             }
         }
+        if (content.getMetadataMap() != null) {
+            FileMetadataTable.getInstance().setMetadataMap(content.getMetadataMap());
+            FileMetadataTable.getInstance().printTable();
+        }
         node.promoteToRedundancy();
         SuperNodeTable.getInstance().addRedundancy(new RoutingEntry(node.getNodeId(), node.getIp(), node.getPort(), node.getRole()));
+
         System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격 및 테이블 동기화 완료");
 
-        //System.out.println("Log - Promote Redundancy Handler: Table Update Successful");
-        //SuperNodeTable.getInstance().printTable();
+        SuperNodeTable.getInstance().printTable();
+        FileMetadataTable.getInstance().printTable();
     }
 
     /*private void handleSuperNodeRevived(Message<?> message) {           // message에 이전 SuperNode의 RoutingEntry가 들어가 있음
