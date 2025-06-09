@@ -2,16 +2,13 @@ package com.p2pnetwork.network;
 
 import com.p2pnetwork.message.Message;
 import com.p2pnetwork.message.MessageType;
-import com.p2pnetwork.message.dto.AssignSuperNodeContent;
-import com.p2pnetwork.message.dto.JoinResponseContent;
-import com.p2pnetwork.message.dto.PromotionContent;
-import com.p2pnetwork.message.dto.SyncAllTableContent;
+import com.p2pnetwork.message.dto.*;
 import com.p2pnetwork.node.Node;
 import com.p2pnetwork.node.NodeRole;
 import com.p2pnetwork.routing.RoutingEntry;
+import com.p2pnetwork.routing.file.FileMetadataTable;
 import com.p2pnetwork.routing.table.SuperNodeTable;
 
-import java.awt.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -106,6 +103,24 @@ public class MessageHandler {
                 break;
             case REMOVE_REDUNDANCY_BROADCAST:
                 handleRemoveRedundancyBroadcast(message);
+                break;
+            case REQUEST_FILE_METADATA:
+                handleRequestFileMetadata(message);
+                break;
+            case REQUEST_FILE_DOWNLOAD:
+                handleRequestFileDownload(message);
+                break;
+            case RESPOND_FILE_METADATA:
+                handleResponseFileMetadata(message);
+                break;
+            case RESPOND_FILE_DOWNLOAD:
+                handleResponseFileDownload(message);
+                break;
+            case NOTIFY_FILE_DOWNLOAD:
+                handleNotifyFileDownload(message);
+                break;
+            case SYNC_FILE_METADATA:
+                handleSyncFileMetadata(message);
                 break;
             default:
                 break;
@@ -1212,4 +1227,135 @@ public class MessageHandler {
         node.setRole(NodeRole.PEER);
         //TODO: SuperNodeTable 리셋 (?)
     }*/
+
+    private void handleRequestFileMetadata(Message<?> message) {
+        String fileHash = (String) message.getContent();
+
+        String requestId = message.getSenderId();
+        RoutingEntry reqEntry = node.getRoutingTable().getEntry(requestId);
+
+        RoutingEntry fileEntry = FileMetadataTable.getInstance().getAnyFileEntry(fileHash);
+
+        if(fileEntry==null) {
+            Message<FileMetadataContent> request = new Message<>(
+                    MessageType.RESPOND_FILE_METADATA,
+                    node.getNodeId(),
+                    reqEntry.getNodeId(),
+                    new FileMetadataContent(false, fileHash, null),
+                    System.currentTimeMillis()
+            );
+            node.getMessageSender().sendMessage(reqEntry, request);
+            return;
+        }
+
+        Message<FileMetadataContent> request = new Message<>(
+                MessageType.RESPOND_FILE_METADATA,
+                node.getNodeId(),
+                reqEntry.getNodeId(),
+                new FileMetadataContent(true, fileHash, fileEntry),
+                System.currentTimeMillis()
+        );
+        node.getMessageSender().sendMessage(reqEntry, request);
+    }
+
+    private void handleResponseFileMetadata(Message<?> message) {
+        FileMetadataContent content = (FileMetadataContent) message.getContent();
+        String fileHash = content.getFileHash();
+        RoutingEntry targetEntry = content.getTargetEntry();
+
+        if(content.isFound()){
+            Message<String> request = new Message<>(
+                    MessageType.REQUEST_FILE_DOWNLOAD,
+                    node.getNodeId(),
+                    targetEntry.getNodeId(),
+                    fileHash,
+                    System.currentTimeMillis()
+            );
+            node.getMessageSender().sendMessage(targetEntry, request);
+            return;
+        }
+
+        // Origin 서버에서 다운로드 이후
+
+        RoutingEntry superNodeEntry = node.getRoutingTable().getSuperNodeEntry();
+
+        Message<String> notify = new Message<>(
+                MessageType.NOTIFY_FILE_DOWNLOAD,
+                node.getNodeId(),
+                superNodeEntry.getNodeId(),
+                fileHash,
+                System.currentTimeMillis()
+        );
+        node.getMessageSender().sendMessage(superNodeEntry, notify);
+    }
+
+    private void handleRequestFileDownload(Message<?> message) {
+        String fileHash = (String) message.getContent();
+
+        String requestId = message.getSenderId();
+        RoutingEntry reqEntry = node.getRoutingTable().getEntry(requestId);
+
+        Message<FileDownloadContent> request = new Message<>(
+                MessageType.RESPOND_FILE_DOWNLOAD,
+                node.getNodeId(),
+                reqEntry.getNodeId(),
+                new FileDownloadContent(true, fileHash, "File Data Content"),
+                System.currentTimeMillis()
+        );
+        node.getMessageSender().sendMessage(reqEntry, request);
+    }
+
+    private void handleResponseFileDownload(Message<?> message) {
+        FileDownloadContent content = (FileDownloadContent) message.getContent();
+        String fileHash = content.getFileHash();
+        String fileData = content.getFileData();
+        
+        // 그룹 노드로 부터 파일 다운로드 완료
+
+        RoutingEntry superNodeEntry = node.getRoutingTable().getSuperNodeEntry();
+
+        Message<String> request = new Message<>(
+                MessageType.NOTIFY_FILE_DOWNLOAD,
+                node.getNodeId(),
+                superNodeEntry.getNodeId(),
+                fileHash,
+                System.currentTimeMillis()
+        );
+        node.getMessageSender().sendMessage(superNodeEntry, request);
+    }
+
+    private void handleNotifyFileDownload(Message<?> message) {
+        String fileHash = (String) message.getContent();
+
+        String requestId = message.getSenderId();
+        RoutingEntry reqEntry = node.getRoutingTable().getEntry(requestId);
+
+        FileMetadataTable.getInstance().addFileMetadata(fileHash, reqEntry);
+
+        RoutingEntry redundancyEntry = node.getRoutingTable().getRedundancyEntry();
+
+        SyncFileMetadataContent content = new SyncFileMetadataContent(fileHash, reqEntry);
+
+        Message<SyncFileMetadataContent> syncMessage = new Message<>(
+                MessageType.SYNC_FILE_METADATA,
+                node.getNodeId(),
+                redundancyEntry.getNodeId(),
+                content,
+                System.currentTimeMillis()
+        );
+
+        node.getMessageSender().sendMessage(redundancyEntry, syncMessage);
+
+        FileMetadataTable.getInstance().printTable();
+    }
+
+    private void handleSyncFileMetadata(Message<?> message) {
+        SyncFileMetadataContent content = (SyncFileMetadataContent) message.getContent();
+        String fileHash = content.getFileHash();
+        RoutingEntry entry = content.getEntry();
+
+        FileMetadataTable.getInstance().addFileMetadata(fileHash, entry);
+
+        FileMetadataTable.getInstance().printTable();
+    }
 }

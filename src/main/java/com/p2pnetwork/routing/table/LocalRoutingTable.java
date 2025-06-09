@@ -23,6 +23,10 @@ public class LocalRoutingTable {
         localRoutingMap.put(entry.getNodeId(), entry);
     }
 
+    public RoutingEntry getEntry(String nodeId) {
+        return localRoutingMap.get(nodeId);
+    }
+
     public void removeEntry(String nodeId) {
         localRoutingMap.remove(nodeId);
     }

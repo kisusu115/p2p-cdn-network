@@ -1,5 +1,6 @@
 package com.p2pnetwork.node;
 
+import com.p2pnetwork.command.UserCommandHandler;
 import com.p2pnetwork.message.Message;
 import com.p2pnetwork.message.MessageType;
 import com.p2pnetwork.network.ClientHandler;
@@ -66,6 +67,8 @@ public class Node {
                 System.exit(1);
             }
         }
+
+        executor.submit(new UserCommandHandler(this));
     }
 
     private void listen() {
@@ -164,5 +167,10 @@ public class Node {
                 null,
                 System.currentTimeMillis()
         ));
+    }
+
+    public boolean iAmSuperNode() {
+        RoutingEntry mySuperNode = routingTable.getSuperNodeEntry();
+        return nodeId.equals(mySuperNode.getNodeId());
     }
 }

@@ -29,5 +29,11 @@ public enum MessageType {
     UPDATE_SUPERNODE_TABLE_SUPER,       // SuperNode → Redundancy: SuperNodeTable을 update하게 만듦
     UPDATE_SUPERNODE_TABLE_BOOTSTRAP,   // SuperNode → Redundancy: SuperNodeTable을 update하게 만듦
     REDUNDANCY_DISCONNECT,       // SuperNode → Self: Redundancy와 TCP 연결이 끊어져 작업을 수행
-    REMOVE_REDUNDANCY_BROADCAST         // SuperNode → SuperNode들과 Peer들: Table에서 Redundancy를 지우라 알림
+    REMOVE_REDUNDANCY_BROADCAST,        // SuperNode → SuperNode들과 Peer들: Table에서 Redundancy를 지우라 알림
+    REQUEST_FILE_METADATA,      // SuperNode에 파일 메타데이터 질의
+    RESPOND_FILE_METADATA,      // 메타데이터 질의에 대한 응답 진행 (Found / Not Found)
+    REQUEST_FILE_DOWNLOAD,      // 파일 다운로드 요청
+    RESPOND_FILE_DOWNLOAD,      // 파일 다운로드 응답
+    NOTIFY_FILE_DOWNLOAD,       // 파일 다운로드 결과 전파
+    SYNC_FILE_METADATA          // 파일 메타데이터 테이블 동기화 (SuperNode -> Redundancy)
 }
