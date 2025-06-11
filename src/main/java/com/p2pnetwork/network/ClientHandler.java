@@ -9,8 +9,11 @@ import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.routing.table.SuperNodeTable;
 import com.p2pnetwork.util.JsonUtils;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientHandler implements Runnable {
     private final Socket socket;
@@ -93,6 +96,28 @@ public class ClientHandler implements Runnable {
             System.out.println("[ERROR] SuperNode와 연결이 끊어졌습니다. 승격을 요청합니다.");
             String geohash5 = node.getNodeId().split("_")[0];
             RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
+
+            AtomicInteger superCount = new AtomicInteger(0);
+            node.getMessageHandler().setSuperCount(superCount.get());
+            for (RoutingEntry entry : SuperNodeTable.getInstance().getAllSuperNodeEntries()){
+                new Thread(() -> {
+                    Socket socket = new Socket();
+                    try {
+                        SocketAddress address = new InetSocketAddress(entry.getIp(), entry.getPort());
+                        socket.connect(address, 1000);
+                        superCount.getAndIncrement();
+                        node.getMessageHandler().setSuperCount(superCount.get());
+                    } catch (Exception ex){
+                        System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
+                    } finally {
+                        try {
+                            socket.close();
+                        } catch (IOException ex) {
+                            System.out.println("[ERROR] Socket Closing Error");
+                        }
+                    }
+                }).start();
+            }
 
             MessageSender sender = new MessageSender(node);
             if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
