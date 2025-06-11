@@ -55,9 +55,9 @@ public class MessageHandler {
             case PROMOTE_REDUNDANCY:
                 handlePromoteRedundancy(message);
                 break;
-            /*case REQUEST_TCP_CONNECT:
+            case REQUEST_TCP_CONNECT:
                 handleRequestTCPConnect(message);
-                break;*/
+                break;
             case REQUEST_TEMP_PROMOTE, REQUEST_PROMOTE:
                 handleRequestPromote(message);
                 break;
@@ -411,14 +411,25 @@ public class MessageHandler {
             vote = 0;
         }
         else {
-            //TODO(?): SuperNode 죽음 기다렸다 재확인, 죽었으면 다시 승격 요청, 살아 있으면 자기 자신 재시작 (SuperNodeTable 리셋 및 Peer로 강등)
+            //TODO: SuperNode 죽음 기다렸다 재확인, 죽었으면 다시 승격 요청, 살아 있으면 Bootstrap일 땐 재연결, SuperNode일 땐 자기 자신 강등 --> 완료
             try {
             Thread.sleep(10000);
             if (checkAlive(superEntry)) {
-                //SuperNodeTable superNodeTable = SuperNodeTable.getInstance();
-                //superNodeTable.clear();
-                node.setRole(NodeRole.PEER);
-                return;
+                if (superEntry.getRole() == NodeRole.SUPERNODE) {
+                    //SuperNodeTable superNodeTable = SuperNodeTable.getInstance();
+                    //superNodeTable.clear();
+                    node.setRole(NodeRole.PEER);
+                    return;
+                }
+                else if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
+                    new MessageSender(node).sendMessage(superEntry, new Message<>(
+                            MessageType.REQUEST_TCP_CONNECT,
+                            node.getNodeId(),
+                            superEntry.getNodeId(),
+                            null,
+                            System.currentTimeMillis()
+                    ));
+                }
             }
 
             this.superCount.set(0);
@@ -783,7 +794,7 @@ public class MessageHandler {
         }
     }*/
 
-    /*private void handleRequestTCPConnect(Message<?> message) {
+    private void handleRequestTCPConnect(Message<?> message) {
         //TODO: TCP 연결 재수립
         RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getRedundancyNode(node.getNodeId().split("_")[0]);
         MessageSender sender = new MessageSender(node);
@@ -794,7 +805,7 @@ public class MessageHandler {
                 null,
                 System.currentTimeMillis()
         ));
-    }*/
+    }
 
     private void handleRedundancyDisconnect(Message<?> message) {
         if (node.hasAtLeastRole(NodeRole.BOOTSTRAP)) {
