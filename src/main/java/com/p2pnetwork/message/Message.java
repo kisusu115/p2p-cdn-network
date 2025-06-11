@@ -12,4 +12,14 @@ public class Message<T> {
     private String targetId;
     private T content;
     private long timestamp;
+
+    public static <T> Message<T> copy(Message<T> originMessage) {
+        return new Message<>(
+                originMessage.getType(),
+                originMessage.getSenderId(),
+                originMessage.getTargetId(),
+                originMessage.getContent(),
+                originMessage.getTimestamp()
+        );
+    }
 }

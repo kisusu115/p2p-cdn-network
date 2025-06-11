@@ -319,7 +319,7 @@ public class MessageHandler {
 
         SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                 .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 되살아난 Bootstrap 제외
-                .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
         node.getRoutingTable().getEntries().stream()
                 .filter(entry -> !entry.getNodeId().equals(node.getRoutingTable().getSuperNodeEntry().getNodeId()))     // 되살아난 Bootstrap 제외
@@ -365,9 +365,9 @@ public class MessageHandler {
             System.out.println("[INFO] 파일 메타데이터 테이블 갱신");
         }
 
-        SuperNodeTable.getInstance().printTable();
-        node.getRoutingTable().printTable();
-        FileMetadataTable.getInstance().printTable();
+        //SuperNodeTable.getInstance().printTable();
+        //node.getRoutingTable().printTable();
+        //FileMetadataTable.getInstance().printTable();
     }
 
     private void handleBootstrapReplacement(Message<?> message) {
@@ -466,7 +466,7 @@ public class MessageHandler {
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                        .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
             else if (superEntry.getRole() == NodeRole.SUPERNODE){
                 Message<String> broadcastMsg = new Message<String>(
@@ -478,7 +478,7 @@ public class MessageHandler {
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                        .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
 
             Thread.sleep(10000);
@@ -502,7 +502,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
@@ -528,7 +528,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
@@ -609,7 +609,7 @@ public class MessageHandler {
 
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), removeRedundancyBroadcastMsg));
+                        .forEach(entry -> sender.sendMessage(entry, removeRedundancyBroadcastMsg));
 
                 node.getRoutingTable().removeEntry(superEntry.getNodeId());
                 superEntry.setRole(NodeRole.PEER);
@@ -639,7 +639,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), redundancyBroadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, redundancyBroadcastMsg));
 
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
@@ -740,7 +740,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
         }
         else if (superEntry.getRole() == NodeRole.SUPERNODE){
             Message<String> broadcastMsg = new Message<String>(
@@ -752,7 +752,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
         }
     }
 
@@ -891,7 +891,7 @@ public class MessageHandler {
 
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), removeRedundancyBroadcastMsg));
+                        .forEach(entry -> sender.sendMessage(entry, removeRedundancyBroadcastMsg));
 
                 node.getRoutingTable().removeEntry(redundancyEntry.getNodeId());
                 redundancyEntry.setRole(NodeRole.PEER);
@@ -919,7 +919,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))                           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), redundancyBroadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, redundancyBroadcastMsg));
 
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(redundancyEntry.getNodeId()))                // 죽은 Redundancy 제외
@@ -1037,7 +1037,7 @@ public class MessageHandler {
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(peerEntry.getNodeId())
                             && !entry.getNodeId().equals(node.getNodeId()))
-                    .forEach(entry -> messageSender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> messageSender.sendMessage(entry, broadcastMsg));
 
             new MessageSender(node).sendMessage(node.getRoutingTable().getRedundancyEntry(), broadcastMsg);
 
@@ -1067,7 +1067,7 @@ public class MessageHandler {
         AssignSuperNodeContent content = (AssignSuperNodeContent) message.getContent();
         if (content.isPromote()) {
             node.promoteToSuperNode();
-            System.out.println("[INFO] " + node.getNodeId() + " ▶ 새로운 슈퍼노드로 승격되었습니다.");
+            //System.out.println("[INFO] " + node.getNodeId() + " ▶ 새로운 슈퍼노드로 승격되었습니다.");
             if (content.getSuperNodes() != null) {
                 Arrays.stream(content.getSuperNodes())
                         .forEach(SuperNodeTable.getInstance()::addSuperNode);
@@ -1081,7 +1081,7 @@ public class MessageHandler {
         } else {
             node.setSuperNode(content.getSuperNodeEntry());
             System.out.println("[INFO] " + node.getNodeId() + " ▶ 슈퍼노드 " +
-                    content.getSuperNodeEntry().getNodeId() + " 에 할당되었습니다.");
+                    content.getSuperNodeEntry().getNodeId() + " 할당");
         }
     }
 
@@ -1185,7 +1185,7 @@ public class MessageHandler {
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))
                     .forEach(entry -> {
-                        new MessageSender(node).sendMessage(entry.getIp(), entry.getPort(), broadcastMsg);
+                        new MessageSender(node).sendMessage(entry, broadcastMsg);
                     });
          }
 
@@ -1214,7 +1214,7 @@ public class MessageHandler {
                 .filter(entry -> !entry.getNodeId().equals(peerEntry.getNodeId())
                         && !entry.getNodeId().equals(node.getNodeId()))
                 .forEach(entry -> {
-                    new MessageSender(node).sendMessage(entry.getIp(), entry.getPort(), broadcastMsg);
+                    new MessageSender(node).sendMessage(entry, broadcastMsg);
                 });
     }
 
@@ -1234,7 +1234,7 @@ public class MessageHandler {
             node.getRoutingTable().setRedundancyEntry(content.getRedundancyEntry());
             System.out.println("[INFO] 레둔던시 엔트리 갱신");
         }
-        node.getRoutingTable().printTable();
+        //node.getRoutingTable().printTable();
     }
 
     private void handleNewPeerBroadcast(Message<?> message) {
@@ -1261,15 +1261,15 @@ public class MessageHandler {
         }
         if (content.getMetadataMap() != null) {
             FileMetadataTable.getInstance().setMetadataMap(content.getMetadataMap());
-            FileMetadataTable.getInstance().printTable();
+            //FileMetadataTable.getInstance().printTable();
         }
         node.promoteToRedundancy();
         SuperNodeTable.getInstance().addRedundancy(new RoutingEntry(node.getNodeId(), node.getIp(), node.getPort(), node.getRole()));
 
-        System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격 및 테이블 동기화 완료");
-
-        SuperNodeTable.getInstance().printTable();
-        FileMetadataTable.getInstance().printTable();
+        System.out.println("[INFO] " + node.getNodeId() + " ▶ REDUNDANCY로 승격");
+        System.out.println("SupernodeTable/MetadataTable 동기화 완료");
+        //SuperNodeTable.getInstance().printTable();
+        //FileMetadataTable.getInstance().printTable();
     }
 
     /*private void handleSuperNodeRevived(Message<?> message) {           // message에 이전 SuperNode의 RoutingEntry가 들어가 있음
@@ -1349,7 +1349,7 @@ public class MessageHandler {
             return;
         }
 
-        // Origin 서버에서 다운로드 이후
+        System.out.println("[INFO] Origin 서버로부터 다운로드 완료");
 
         RoutingEntry superNodeEntry = node.getRoutingTable().getSuperNodeEntry();
 
@@ -1383,8 +1383,8 @@ public class MessageHandler {
         FileDownloadContent content = (FileDownloadContent) message.getContent();
         String fileHash = content.getFileHash();
         String fileData = content.getFileData();
-        
-        // 그룹 노드로 부터 파일 다운로드 완료
+
+        System.out.println("[INFO] 그룹 내 노드로부터 다운로드 완료: From-"+message.getSenderId());
 
         RoutingEntry superNodeEntry = node.getRoutingTable().getSuperNodeEntry();
 
@@ -1420,7 +1420,7 @@ public class MessageHandler {
 
         node.getMessageSender().sendMessage(redundancyEntry, syncMessage);
 
-        FileMetadataTable.getInstance().printTable();
+        //FileMetadataTable.getInstance().printTable();
     }
 
     private void handleSyncFileMetadata(Message<?> message) {
@@ -1430,6 +1430,6 @@ public class MessageHandler {
 
         FileMetadataTable.getInstance().addFileMetadata(fileHash, entry);
 
-        FileMetadataTable.getInstance().printTable();
+        //FileMetadataTable.getInstance().printTable();
     }
 }

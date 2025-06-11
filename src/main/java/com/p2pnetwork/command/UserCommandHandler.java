@@ -6,6 +6,7 @@ import com.p2pnetwork.message.dto.SyncFileMetadataContent;
 import com.p2pnetwork.node.Node;
 import com.p2pnetwork.routing.RoutingEntry;
 import com.p2pnetwork.routing.file.FileMetadataTable;
+import com.p2pnetwork.routing.table.SuperNodeTable;
 import com.p2pnetwork.util.FileKeyGenerator;
 
 import java.util.Scanner;
@@ -20,10 +21,10 @@ public class UserCommandHandler implements Runnable {
     @Override
     public void run() {
         Scanner scanner = new Scanner(System.in);
-        System.out.println("[COMMAND] 명령어를 입력하세요.");
+        //System.out.println("[COMMAND] 명령어를 입력하세요.");
 
         while (true) {
-            System.out.print("> ");
+            //System.out.print("> ");
             String input = scanner.nextLine();
             String[] parts = input.trim().split("\\s+");
 
@@ -43,6 +44,14 @@ public class UserCommandHandler implements Runnable {
 
                 case "routing":
                     node.getRoutingTable().printTable();
+                    break;
+
+                case "supernode":
+                    SuperNodeTable.getInstance().printTable();
+                    break;
+
+                case "metadata":
+                    FileMetadataTable.getInstance().printTable();
                     break;
 
                 case "exit":
@@ -69,7 +78,7 @@ public class UserCommandHandler implements Runnable {
                 RoutingEntry redundancyEntry = node.getRoutingTable().getRedundancyEntry();
 
                 if(redundancyEntry == null) {
-                    FileMetadataTable.getInstance().printTable();
+                    //FileMetadataTable.getInstance().printTable();
                     return;
                 }
 
@@ -85,7 +94,7 @@ public class UserCommandHandler implements Runnable {
 
                 node.getMessageSender().sendMessage(redundancyEntry, syncMessage);
 
-                FileMetadataTable.getInstance().printTable();
+                //FileMetadataTable.getInstance().printTable();
                 return;
             }
 

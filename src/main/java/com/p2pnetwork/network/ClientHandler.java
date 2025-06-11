@@ -35,7 +35,7 @@ public class ClientHandler implements Runnable {
             if (message.getType() != MessageType.TCP_CONNECT){
                 node.receiveMessage(message);
                 socket.close();
-                System.out.println("[MHED] Message Handler End: " + message.getType() + " 메시지 처리 종료");
+                //System.out.println("[MHED] Message Handler End: " + message.getType() + " 메시지 처리 종료");
                 return;
             }
 
@@ -46,7 +46,7 @@ public class ClientHandler implements Runnable {
                     + "와 TCP 연결이 수립되었습니다.");
             System.out.println("[INFO] SuperNode " + node.getRoutingTable().getSuperNodeEntry().getNodeId()
                     + "와 TCP 연결이 수립되었습니다.");*/
-            System.out.println("[INFO] SuperNode와 TCP 연결이 수립되었습니다.");
+            System.out.println("[INFO] SuperNode와 TCP 연결 수립 완료");
 
             while (true) {
                 BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));

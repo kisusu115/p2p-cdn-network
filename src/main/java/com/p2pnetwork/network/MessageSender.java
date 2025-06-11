@@ -26,7 +26,9 @@ public class MessageSender {
     }
 
     public void sendMessage(RoutingEntry routingEntry, Message<?> message) {
-        sendMessage(routingEntry.getIp(), routingEntry.getPort(), message);
+        Message messageToSend = Message.copy(message);
+        messageToSend.setTargetId(routingEntry.getNodeId());
+        sendMessage(routingEntry.getIp(), routingEntry.getPort(), messageToSend);
     }
 
     public void sendMessage(String ip, int port, Message<?> message) {
