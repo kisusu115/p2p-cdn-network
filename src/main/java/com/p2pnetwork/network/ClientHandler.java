@@ -125,27 +125,27 @@ public class ClientHandler implements Runnable {
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_TEMP_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                         .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                        .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
             else {
                  Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                         .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                        .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
         }
         catch (IOException e) {

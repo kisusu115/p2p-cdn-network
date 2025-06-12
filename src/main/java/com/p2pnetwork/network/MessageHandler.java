@@ -327,7 +327,7 @@ public class MessageHandler {
         node.getRoutingTable().getEntries().stream()
                 .filter(entry -> !entry.getNodeId().equals(node.getRoutingTable().getSuperNodeEntry().getNodeId()))     // 되살아난 Bootstrap 제외
                 .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))                                           // 자기 자신 제외
-                .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
         //TODO: 자신의 SuperNodeTable 변경 (geohash값을 사용해 Bootstrap과 Redundancy를 SuperNodeTable 상 교환) --> 완료
     }
@@ -489,7 +489,7 @@ public class MessageHandler {
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_TEMP_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
@@ -502,7 +502,7 @@ public class MessageHandler {
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
@@ -538,7 +538,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
             //TODO: 자신의 SuperNodeTable 변경 (geohash값을 사용해 Bootstrap과 Redundancy를 SuperNodeTable 상 교환) --> 완료
             SuperNodeTable.getInstance().exchangeBootstrap(geohash5);
@@ -564,7 +564,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
             //System.out.println("Log - Promote Vote Handler: Promoted SuperNode Broadcast Done");
 
@@ -633,7 +633,7 @@ public class MessageHandler {
                 Message<String> removeRedundancyBroadcastMsg = new Message<>(
                         MessageType.REMOVE_REDUNDANCY_BROADCAST,
                         node.getNodeId(),
-                        "ALL",
+                        "Super Node",
                         geohash5,
                         System.currentTimeMillis()
                 );
@@ -675,7 +675,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), redundancyBroadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, redundancyBroadcastMsg));
 
             //System.out.println("Log - Promote Vote Handler: Promoted Redundancy Broadcast Done");
 
@@ -786,7 +786,7 @@ public class MessageHandler {
             Message<String> broadcastMsg = new Message<String>(
                     MessageType.REQUEST_TEMP_PROMOTE,
                     node.getNodeId(),
-                    "ALL",
+                    "Bootstrap",
                     geohash5,
                     System.currentTimeMillis()
             );
@@ -799,7 +799,7 @@ public class MessageHandler {
             Message<String> broadcastMsg = new Message<String>(
                     MessageType.REQUEST_PROMOTE,
                     node.getNodeId(),
-                    "ALL",
+                    "Bootstrap",
                     geohash5,
                     System.currentTimeMillis()
             );
@@ -938,7 +938,7 @@ public class MessageHandler {
                 Message<String> removeRedundancyBroadcastMsg = new Message<>(
                         MessageType.REMOVE_REDUNDANCY_BROADCAST,
                         node.getNodeId(),
-                        "ALL",
+                        "Super Node",
                         geohash5,
                         System.currentTimeMillis()
                 );
@@ -978,7 +978,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(redundancyEntry.getNodeId()))                // 죽은 Redundancy 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))                           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), redundancyBroadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, redundancyBroadcastMsg));
 
             //System.out.println("Log - Redundancy Disconnect Handler: Promoted Redundancy Broadcast Done");
         }
