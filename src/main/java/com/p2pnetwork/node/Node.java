@@ -141,7 +141,7 @@ public class Node {
 
     public void setRole(NodeRole role) {
         this.role = role;
-        System.out.println("[INFO] " + nodeId + " ▶ NodeRole 변경");
+        System.out.println("[INFO] " + nodeId + " ▶ NodeRole 변경: " + role.toString());
     }
 
     public void promoteToRedundancy() {
