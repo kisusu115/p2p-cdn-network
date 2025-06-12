@@ -648,6 +648,7 @@ public class MessageHandler {
                         .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
                         .forEach(entry -> sender.sendMessage(entry, removeRedundancyBroadcastMsg));
 
+                SuperNodeTable.getInstance().removeRedundancy(geohash5);
                 node.getRoutingTable().removeEntry(superEntry.getNodeId());
                 superEntry.setRole(NodeRole.PEER);
                 node.getRoutingTable().addEntry(superEntry);
@@ -953,6 +954,7 @@ public class MessageHandler {
                         .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
                         .forEach(entry -> sender.sendMessage(entry, removeRedundancyBroadcastMsg));
 
+                SuperNodeTable.getInstance().removeRedundancy(geohash5);
                 node.getRoutingTable().removeEntry(redundancyEntry.getNodeId());
                 redundancyEntry.setRole(NodeRole.PEER);
                 node.getRoutingTable().addEntry(redundancyEntry);
@@ -1063,7 +1065,8 @@ public class MessageHandler {
             return;
         }
 
-        if ((existSuperNode == null) || (existRedundancy == null && !checkAlive(existSuperNode))) {
+        if ((existSuperNode == null) || (existRedundancy == null && !checkAlive(existSuperNode))
+                || existSuperNode.getNodeId().equals(peerEntry.getNodeId())) {
             // 슈퍼노드 승격
             peerEntry.setRole(NodeRole.SUPERNODE);
             SuperNodeTable.getInstance().addSuperNode(peerEntry);
