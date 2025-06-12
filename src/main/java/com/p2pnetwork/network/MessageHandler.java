@@ -442,12 +442,18 @@ public class MessageHandler {
             //TODO: SuperNode 죽음 기다렸다 재확인, 죽었으면 다시 승격 요청, 살아 있으면 Bootstrap일 땐 재연결, SuperNode일 땐 자기 자신 강등 --> 완료
             try {
             Thread.sleep(10000);
+
+            if (this.superCount.get() != -1) {
+                this.superCount.set(-1);
+            }
+            else return;
+
+            vote = 0;
             if (checkAlive(superEntry)) {
                 if (superEntry.getRole() == NodeRole.SUPERNODE) {
                     //SuperNodeTable superNodeTable = SuperNodeTable.getInstance();
                     //superNodeTable.clear();
                     node.setRole(NodeRole.PEER);
-                    return;
                 }
                 else if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
                     new MessageSender(node).sendMessage(superEntry, new Message<>(
@@ -458,6 +464,7 @@ public class MessageHandler {
                             System.currentTimeMillis()
                     ));
                 }
+                return;
             }
 
             this.superCount.set(0);
@@ -481,7 +488,6 @@ public class MessageHandler {
                 }).start();
             }
 
-            vote = 0;
             MessageSender sender = new MessageSender(node);
             String geohash5 = node.getNodeId().split("_")[0];
 
