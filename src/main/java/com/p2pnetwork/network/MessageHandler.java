@@ -79,6 +79,9 @@ public class MessageHandler {
             case BOOTSTRAP_WORKING:
                 handleBootstrapWorking(message);
                 break;
+            case REDUNDANCY_REVIVED:
+                handleRedundancyRevived(message);
+                break;
             case PROMOTED_SUPERNODE_BROADCAST:
                 handlePromotedSuperNodeBroadcast(message);
                 break;
@@ -329,6 +332,31 @@ public class MessageHandler {
         //TODO: 자신의 SuperNodeTable 변경 (geohash값을 사용해 Bootstrap과 Redundancy를 SuperNodeTable 상 교환) --> 완료
     }
 
+    private void handleRedundancyRevived(Message<?> message) {
+        String geohash5 = node.getNodeId().split("_")[0];
+
+        MessageSender sender = new MessageSender(node);
+        RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getRedundancyNode(geohash5);
+        SyncAllTableContent content = new SyncAllTableContent(
+                SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
+                SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0]),
+
+                node.getRoutingTable().getSuperNodeEntry(),
+                node.getRoutingTable().getRedundancyEntry(),
+                node.getRoutingTable().getEntries().toArray(new RoutingEntry[0]),
+
+                FileMetadataTable.getInstance().getMetadataMap()
+        );
+
+        sender.sendMessage(redundancyEntry, new Message<>(
+                MessageType.BOOTSTRAP_TABLE_SYNC,
+                node.getNodeId(),
+                redundancyEntry.getNodeId(),
+                content,
+                System.currentTimeMillis()
+        ));
+    }
+
     private void handleBootstrapTableSync(Message<?> message) {
         SyncAllTableContent content = (SyncAllTableContent) message.getContent();
 
@@ -434,6 +462,7 @@ public class MessageHandler {
 
             this.superCount.set(0);
             for (RoutingEntry entry : SuperNodeTable.getInstance().getAllSuperNodeEntries()){
+                if (entry.getRole() == NodeRole.SUPERNODE) continue;
                 new Thread(() -> {
                     Socket socket = new Socket();
                     try {
@@ -441,7 +470,7 @@ public class MessageHandler {
                         socket.connect(address, 1000);
                         this.superCount.getAndIncrement();
                     } catch (Exception ex){
-                        System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
+                        //System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
                     } finally {
                         try {
                             socket.close();
@@ -466,6 +495,7 @@ public class MessageHandler {
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                        .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                         .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
             else if (superEntry.getRole() == NodeRole.SUPERNODE){
@@ -478,6 +508,7 @@ public class MessageHandler {
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                        .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                         .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
 
@@ -728,6 +759,27 @@ public class MessageHandler {
         String geohash5 = node.getNodeId().split("_")[0];
         RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
 
+        this.superCount.set(0);
+        for (RoutingEntry entry : SuperNodeTable.getInstance().getAllSuperNodeEntries()){
+            if (entry.getRole() == NodeRole.SUPERNODE) continue;
+            new Thread(() -> {
+                Socket socket = new Socket();
+                try {
+                    SocketAddress address = new InetSocketAddress(entry.getIp(), entry.getPort());
+                    socket.connect(address, 1000);
+                    this.superCount.getAndIncrement();
+                } catch (Exception ex){
+                    //System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
+                } finally {
+                    try {
+                        socket.close();
+                    } catch (IOException ex) {
+                        System.out.println("[ERROR] Socket Closing Error");
+                    }
+                }
+            }).start();
+        }
+
         MessageSender sender = new MessageSender(node);
 
         if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
@@ -740,6 +792,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                    .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                     .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
         }
         else if (superEntry.getRole() == NodeRole.SUPERNODE){
@@ -752,6 +805,7 @@ public class MessageHandler {
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                    .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                     .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
         }
     }
@@ -795,7 +849,7 @@ public class MessageHandler {
     }*/
 
     private void handleRequestTCPConnect(Message<?> message) {
-        //TODO: TCP 연결 재수립
+        //TODO: TCP 연결 재수립 --> 완료
         RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getRedundancyNode(node.getNodeId().split("_")[0]);
         MessageSender sender = new MessageSender(node);
         sender.sendMessage(redundancyEntry, new Message<>(              // TCP 연결 수립
