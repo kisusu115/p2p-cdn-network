@@ -321,7 +321,7 @@ public class MessageHandler {
         );
 
         SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
-                .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 되살아난 Bootstrap 제외
+                .filter(entry -> !entry.getNodeId().equals(bootstrapEntry.getNodeId()))           // 되살아난 Bootstrap 제외
                 .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
         node.getRoutingTable().getEntries().stream()
