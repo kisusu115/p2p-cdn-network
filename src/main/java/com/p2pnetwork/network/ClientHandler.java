@@ -100,6 +100,7 @@ public class ClientHandler implements Runnable {
             AtomicInteger superCount = new AtomicInteger(0);
             node.getMessageHandler().setSuperCount(superCount.get());
             for (RoutingEntry entry : SuperNodeTable.getInstance().getAllSuperNodeEntries()){
+                if (entry.getRole() == NodeRole.SUPERNODE) continue;
                 new Thread(() -> {
                     Socket socket = new Socket();
                     try {
@@ -108,7 +109,7 @@ public class ClientHandler implements Runnable {
                         superCount.getAndIncrement();
                         node.getMessageHandler().setSuperCount(superCount.get());
                     } catch (Exception ex){
-                        System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
+                        //System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
                     } finally {
                         try {
                             socket.close();
@@ -124,25 +125,27 @@ public class ClientHandler implements Runnable {
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_TEMP_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                        .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
+                        .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
             else {
                  Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
-                        .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                        .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
+                        .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
         }
         catch (IOException e) {

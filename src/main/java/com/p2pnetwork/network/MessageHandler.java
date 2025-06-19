@@ -79,6 +79,9 @@ public class MessageHandler {
             case BOOTSTRAP_WORKING:
                 handleBootstrapWorking(message);
                 break;
+            case REDUNDANCY_REVIVED:
+                handleRedundancyRevived(message);
+                break;
             case PROMOTED_SUPERNODE_BROADCAST:
                 handlePromotedSuperNodeBroadcast(message);
                 break;
@@ -318,15 +321,40 @@ public class MessageHandler {
         );
 
         SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
-                .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 되살아난 Bootstrap 제외
+                .filter(entry -> !entry.getNodeId().equals(bootstrapEntry.getNodeId()))           // 되살아난 Bootstrap 제외
                 .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
         node.getRoutingTable().getEntries().stream()
                 .filter(entry -> !entry.getNodeId().equals(node.getRoutingTable().getSuperNodeEntry().getNodeId()))     // 되살아난 Bootstrap 제외
                 .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))                                           // 자기 자신 제외
-                .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
         //TODO: 자신의 SuperNodeTable 변경 (geohash값을 사용해 Bootstrap과 Redundancy를 SuperNodeTable 상 교환) --> 완료
+    }
+
+    private void handleRedundancyRevived(Message<?> message) {
+        String geohash5 = node.getNodeId().split("_")[0];
+
+        MessageSender sender = new MessageSender(node);
+        RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getRedundancyNode(geohash5);
+        SyncAllTableContent content = new SyncAllTableContent(
+                SuperNodeTable.getInstance().getAllSuperNodeEntries().toArray(new RoutingEntry[0]),
+                SuperNodeTable.getInstance().getAllRedundancyNodeEntries().toArray(new RoutingEntry[0]),
+
+                node.getRoutingTable().getSuperNodeEntry(),
+                node.getRoutingTable().getRedundancyEntry(),
+                node.getRoutingTable().getEntries().toArray(new RoutingEntry[0]),
+
+                FileMetadataTable.getInstance().getMetadataMap()
+        );
+
+        sender.sendMessage(redundancyEntry, new Message<>(
+                MessageType.BOOTSTRAP_TABLE_SYNC,
+                node.getNodeId(),
+                redundancyEntry.getNodeId(),
+                content,
+                System.currentTimeMillis()
+        ));
     }
 
     private void handleBootstrapTableSync(Message<?> message) {
@@ -414,12 +442,18 @@ public class MessageHandler {
             //TODO: SuperNode 죽음 기다렸다 재확인, 죽었으면 다시 승격 요청, 살아 있으면 Bootstrap일 땐 재연결, SuperNode일 땐 자기 자신 강등 --> 완료
             try {
             Thread.sleep(10000);
+
+            if (this.superCount.get() != -1) {
+                this.superCount.set(-1);
+            }
+            else return;
+
+            vote = 0;
             if (checkAlive(superEntry)) {
                 if (superEntry.getRole() == NodeRole.SUPERNODE) {
                     //SuperNodeTable superNodeTable = SuperNodeTable.getInstance();
                     //superNodeTable.clear();
                     node.setRole(NodeRole.PEER);
-                    return;
                 }
                 else if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
                     new MessageSender(node).sendMessage(superEntry, new Message<>(
@@ -430,10 +464,12 @@ public class MessageHandler {
                             System.currentTimeMillis()
                     ));
                 }
+                return;
             }
 
             this.superCount.set(0);
             for (RoutingEntry entry : SuperNodeTable.getInstance().getAllSuperNodeEntries()){
+                if (entry.getRole() == NodeRole.SUPERNODE) continue;
                 new Thread(() -> {
                     Socket socket = new Socket();
                     try {
@@ -441,7 +477,7 @@ public class MessageHandler {
                         socket.connect(address, 1000);
                         this.superCount.getAndIncrement();
                     } catch (Exception ex){
-                        System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
+                        //System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
                     } finally {
                         try {
                             socket.close();
@@ -452,7 +488,6 @@ public class MessageHandler {
                 }).start();
             }
 
-            vote = 0;
             MessageSender sender = new MessageSender(node);
             String geohash5 = node.getNodeId().split("_")[0];
 
@@ -460,24 +495,26 @@ public class MessageHandler {
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_TEMP_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                        .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                         .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
             else if (superEntry.getRole() == NodeRole.SUPERNODE){
                 Message<String> broadcastMsg = new Message<String>(
                         MessageType.REQUEST_PROMOTE,
                         node.getNodeId(),
-                        "ALL",
+                        "Bootstrap",
                         geohash5,
                         System.currentTimeMillis()
                 );
                 SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                         .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                        .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                         .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
             }
 
@@ -507,7 +544,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
             //TODO: 자신의 SuperNodeTable 변경 (geohash값을 사용해 Bootstrap과 Redundancy를 SuperNodeTable 상 교환) --> 완료
             SuperNodeTable.getInstance().exchangeBootstrap(geohash5);
@@ -533,7 +570,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), broadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
 
             //System.out.println("Log - Promote Vote Handler: Promoted SuperNode Broadcast Done");
 
@@ -602,7 +639,7 @@ public class MessageHandler {
                 Message<String> removeRedundancyBroadcastMsg = new Message<>(
                         MessageType.REMOVE_REDUNDANCY_BROADCAST,
                         node.getNodeId(),
-                        "ALL",
+                        "Super Node",
                         geohash5,
                         System.currentTimeMillis()
                 );
@@ -611,6 +648,7 @@ public class MessageHandler {
                         .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
                         .forEach(entry -> sender.sendMessage(entry, removeRedundancyBroadcastMsg));
 
+                SuperNodeTable.getInstance().removeRedundancy(geohash5);
                 node.getRoutingTable().removeEntry(superEntry.getNodeId());
                 superEntry.setRole(NodeRole.PEER);
                 node.getRoutingTable().addEntry(superEntry);
@@ -644,7 +682,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), redundancyBroadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, redundancyBroadcastMsg));
 
             //System.out.println("Log - Promote Vote Handler: Promoted Redundancy Broadcast Done");
 
@@ -728,30 +766,53 @@ public class MessageHandler {
         String geohash5 = node.getNodeId().split("_")[0];
         RoutingEntry superEntry = node.getRoutingTable().getSuperNodeEntry();
 
+        this.superCount.set(0);
+        for (RoutingEntry entry : SuperNodeTable.getInstance().getAllSuperNodeEntries()){
+            if (entry.getRole() == NodeRole.SUPERNODE) continue;
+            new Thread(() -> {
+                Socket socket = new Socket();
+                try {
+                    SocketAddress address = new InetSocketAddress(entry.getIp(), entry.getPort());
+                    socket.connect(address, 1000);
+                    this.superCount.getAndIncrement();
+                } catch (Exception ex){
+                    //System.out.println("[INFO] " + entry.getNodeId() + " 죽음 확인");
+                } finally {
+                    try {
+                        socket.close();
+                    } catch (IOException ex) {
+                        System.out.println("[ERROR] Socket Closing Error");
+                    }
+                }
+            }).start();
+        }
+
         MessageSender sender = new MessageSender(node);
 
         if (superEntry.getRole() == NodeRole.BOOTSTRAP) {
             Message<String> broadcastMsg = new Message<String>(
                     MessageType.REQUEST_TEMP_PROMOTE,
                     node.getNodeId(),
-                    "ALL",
+                    "Bootstrap",
                     geohash5,
                     System.currentTimeMillis()
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                    .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                     .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
         }
         else if (superEntry.getRole() == NodeRole.SUPERNODE){
             Message<String> broadcastMsg = new Message<String>(
                     MessageType.REQUEST_PROMOTE,
                     node.getNodeId(),
-                    "ALL",
+                    "Bootstrap",
                     geohash5,
                     System.currentTimeMillis()
             );
             SuperNodeTable.getInstance().getAllSuperNodeEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(superEntry.getNodeId()))     // 죽은 SuperNode 제외
+                    .filter(entry -> !entry.getRole().equals(NodeRole.SUPERNODE))
                     .forEach(entry -> sender.sendMessage(entry, broadcastMsg));
         }
     }
@@ -795,7 +856,7 @@ public class MessageHandler {
     }*/
 
     private void handleRequestTCPConnect(Message<?> message) {
-        //TODO: TCP 연결 재수립
+        //TODO: TCP 연결 재수립 --> 완료
         RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getRedundancyNode(node.getNodeId().split("_")[0]);
         MessageSender sender = new MessageSender(node);
         sender.sendMessage(redundancyEntry, new Message<>(              // TCP 연결 수립
@@ -884,7 +945,7 @@ public class MessageHandler {
                 Message<String> removeRedundancyBroadcastMsg = new Message<>(
                         MessageType.REMOVE_REDUNDANCY_BROADCAST,
                         node.getNodeId(),
-                        "ALL",
+                        "Super Node",
                         geohash5,
                         System.currentTimeMillis()
                 );
@@ -893,6 +954,7 @@ public class MessageHandler {
                         .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))           // 자기 자신 제외
                         .forEach(entry -> sender.sendMessage(entry, removeRedundancyBroadcastMsg));
 
+                SuperNodeTable.getInstance().removeRedundancy(geohash5);
                 node.getRoutingTable().removeEntry(redundancyEntry.getNodeId());
                 redundancyEntry.setRole(NodeRole.PEER);
                 node.getRoutingTable().addEntry(redundancyEntry);
@@ -924,7 +986,7 @@ public class MessageHandler {
             node.getRoutingTable().getEntries().stream()
                     .filter(entry -> !entry.getNodeId().equals(redundancyEntry.getNodeId()))                // 죽은 Redundancy 제외
                     .filter(entry -> !entry.getNodeId().equals(node.getNodeId()))                           // 자기 자신 제외
-                    .forEach(entry -> sender.sendMessage(entry.getIp(), entry.getPort(), redundancyBroadcastMsg));
+                    .forEach(entry -> sender.sendMessage(entry, redundancyBroadcastMsg));
 
             //System.out.println("Log - Redundancy Disconnect Handler: Promoted Redundancy Broadcast Done");
         }
@@ -1003,7 +1065,8 @@ public class MessageHandler {
             return;
         }
 
-        if ((existSuperNode == null) || (existRedundancy == null && !checkAlive(existSuperNode))) {
+        if ((existSuperNode == null) || (existRedundancy == null && !checkAlive(existSuperNode))
+                || existSuperNode.getNodeId().equals(peerEntry.getNodeId())) {
             // 슈퍼노드 승격
             peerEntry.setRole(NodeRole.SUPERNODE);
             SuperNodeTable.getInstance().addSuperNode(peerEntry);

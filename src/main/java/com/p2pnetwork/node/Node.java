@@ -141,7 +141,7 @@ public class Node {
 
     public void setRole(NodeRole role) {
         this.role = role;
-        System.out.println("[INFO] " + nodeId + " ▶ NodeRole 변경");
+        System.out.println("[INFO] " + nodeId + " ▶ NodeRole 변경: " + role.toString());
     }
 
     public void promoteToRedundancy() {
@@ -172,5 +172,18 @@ public class Node {
     public boolean iAmSuperNode() {
         RoutingEntry mySuperNode = routingTable.getSuperNodeEntry();
         return nodeId.equals(mySuperNode.getNodeId());
+    }
+
+    public void redundancyRevival(){
+        this.role = NodeRole.REDUNDANCY;
+        String geohash5 = nodeId.split("_")[0];
+        RoutingEntry redundancyEntry = SuperNodeTable.getInstance().getSuperNode(geohash5);
+        messageSender.sendMessage(redundancyEntry, new Message<>(
+                MessageType.REDUNDANCY_REVIVED,
+                nodeId,
+                redundancyEntry.getNodeId(),
+                null,
+                System.currentTimeMillis()
+        ));
     }
 }

@@ -47,6 +47,11 @@ public class Main {
                     reviveBootstrapNode(revPort);
                     break;
 
+                case "redrevive":
+                    int redrevPort = Integer.parseInt(args[1]);
+                    reviveRedundancyNode(redrevPort);
+                    break;
+
                 case "node":
                     if (args.length < 4) {
                         printUsage();
@@ -103,6 +108,19 @@ public class Main {
         node.start();
         node.bootstrapRevival();
         System.out.println("[INFO] 부트스트랩 노드 복구됨: " + node.getNodeId());
+    }
+
+    private static void reviveRedundancyNode(int port) throws Exception {
+        double[] coordinates = REDUNDANCY_NODES.get(port);
+        if (coordinates == null) {
+            System.err.println("[ERROR] 지원하지 않는 레둔던시 포트입니다.");
+            printUsage();
+            System.exit(1);
+        }
+        Node node = new Node(coordinates[0], coordinates[1], port);
+        node.start();
+        node.redundancyRevival();
+        System.out.println("[INFO] 레둔던시 노드 복구됨: " + node.getNodeId());
     }
 
     private static void startPeerNode(double lat, double lon, int port) throws Exception {
