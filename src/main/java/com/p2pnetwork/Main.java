@@ -135,6 +135,7 @@ public class Main {
         System.out.println("[INFO] 부트스트랩 노드: java -jar p2p-net.jar bootstrap <port(10001~10004)>");
         System.out.println("[INFO] 레둔던시 노드: java -jar p2p-net.jar redundancy <port(10005~10008)>");
         System.out.println("[INFO] 부트스트랩 복구: java -jar p2p-net.jar revive <port(10001~10004)>");
+        System.out.println("[INFO] 레둔던시 복구: java -jar p2p-net.jar redrevive <port(10005~10008)>");
         System.out.println("[INFO] 일반 노드: java -jar p2p-net.jar node <latitude> <longitude> <port>");
     }
 
