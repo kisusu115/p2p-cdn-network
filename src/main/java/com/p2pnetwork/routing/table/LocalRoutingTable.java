@@ -55,8 +55,10 @@ public class LocalRoutingTable {
 
     public void printTable() {
         System.out.println("==== [LocalRoutingTable] ====");
-        System.out.println("[슈퍼노드] : "+superNodeEntry.getNodeId());
-        System.out.println("[레둔던시] : "+redundancyEntry.getNodeId());
+        String supNodeId = superNodeEntry != null ? superNodeEntry.getNodeId() : "X";
+        System.out.println("[슈퍼노드] : "+supNodeId);
+        String redNodeId = redundancyEntry != null ? redundancyEntry.getNodeId() : "X";
+        System.out.println("[레둔던시] : "+redNodeId);
         System.out.println("[전체 노드]");
         localRoutingMap.forEach((geohash, entry) ->
                 System.out.println("  " + entry.getNodeId() + " : (" + entry.getRole() + ")")
