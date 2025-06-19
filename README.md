@@ -18,7 +18,7 @@ Decentralized Supernode 아키텍처 기반의 P2P 네트워크에서 CDN 동작
 
 미리 등록된 포트(10001 ~ 10004) 중 하나를 사용
 
-`java -jar build/libs/p2p-net.jar bootstrap {port}`
+`java -jar {jar-file path} bootstrap {port}`
 
 **예시**
 
@@ -35,7 +35,7 @@ Decentralized Supernode 아키텍처 기반의 P2P 네트워크에서 CDN 동작
 미리 등록된 포트(10005 ~ 10008) 중 하나를 사용
 각각의 포트는 부트스트랩 노드(10001 ~ 10004)에 대응 
 
-`java -jar build/libs/p2p-net.jar redundancy {port}`
+`java -jar {jar-file path} redundancy {port}`
 
 **예시**
 
@@ -52,7 +52,7 @@ Decentralized Supernode 아키텍처 기반의 P2P 네트워크에서 CDN 동작
 미리 등록된 포트(10001 ~ 10004) 중 하나를 사용
 구동 중이던 부트스트랩 노드의 중지 시 네트워크 복귀를 위해 사용
 
-`java -jar build/libs/p2p-net.jar revive {port}`
+`java -jar {jar-file path} revive {port}`
 
 **예시**
 
@@ -64,11 +64,28 @@ Decentralized Supernode 아키텍처 기반의 P2P 네트워크에서 CDN 동작
 
 ---
 
-### 4. 일반 노드 실행
+### 4. 레둔던시 노드 복구 실행
+
+미리 등록된 포트(10005 ~ 10008) 중 하나를 사용
+구동 중이던 부트스트랩 Redundancy 노드의 중지 시 네트워크 복귀를 위해 사용
+
+`java -jar {jar-file path} redrevive {port}`
+
+**예시**
+
+서울 부트스트랩 노드 복구 실행
+`java -jar build/libs/p2p-net.jar redrevive 10005`
+
+뉴욕 부트스트랩 노드 복구 실행
+`java -jar build/libs/p2p-net.jar redrevive 10006`
+
+---
+
+### 5. 일반 노드 실행
 
 위도(latitude), 경도(longitude), 포트(port)를 입력
 
-`java -jar build/libs/p2p-net.jar node {latitude} {longitude} {port}`
+`java -jar {jar-file path} node {latitude} {longitude} {port}`
 
 **예시**
 
